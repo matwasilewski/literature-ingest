@@ -25,6 +25,7 @@ venv: prerequisites
 
 install: venv precommit-hooks
 	uv pip install -r requirements.txt #force it to install in our venv
+	uv pip install -e .  # Install the package in development mode
 
 precommit: precommit-hooks
 	git fetch origin
