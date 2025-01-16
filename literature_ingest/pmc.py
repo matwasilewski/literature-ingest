@@ -62,7 +62,7 @@ class PMCFTPClient:
                 return date_str
         raise ValueError("No baseline files found in directory")
 
-    def download_baselines(self, base_dir: str = 'data/baselines') -> None:
+    def download_baselines(self, base_dir: str = 'data/baselines', dry_run: bool = False) -> None:
         """Download all baseline files that don't exist locally"""
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
@@ -83,8 +83,11 @@ class PMCFTPClient:
         for remote_file in baseline_files:
             local_path = os.path.join(dated_dir, remote_file)
             if not os.path.exists(local_path):
-                print(f"Downloading {remote_file}...")
-                self.download_file(remote_file, local_path)
+                if not dry_run:
+                    print(f"Downloading {remote_file}...")
+                    self.download_file(remote_file, local_path)
+                else:
+                    print(f"Would download {remote_file} to {local_path}")
             else:
                 print(f"Skipping {remote_file} - already exists")
 
