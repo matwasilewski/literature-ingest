@@ -1,5 +1,5 @@
 [project]
-name = "literature-ingest"
+name = "literature_ingest"
 version = "0.1.0"
 authors = ["0.1.0 <mat.p.wasilewski@gmail.com>"]
 description = ""
@@ -56,4 +56,3 @@ max-complexity = 10
 [tool.mypy]
 ignore_missing_imports = true
 disallow_untyped_defs = true
-

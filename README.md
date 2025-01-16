@@ -1,10 +1,10 @@
-# literature-ingest
+# literature_ingest
 
 # Dev
 ## Add Dependencies
-uv add pytest 
+uv add pytest
 
-New dependency will now be visible in pyproject.toml. 
+New dependency will now be visible in pyproject.toml.
 
 To install the dependency, run `make install`.
 
@@ -15,4 +15,3 @@ This will generate a locked requirements.txt file in the root of the project, an
 To run the pre-commit hooks, run `make precommit`.
 
 This will run the pre-commit hooks on the current branch and the main branch.
-

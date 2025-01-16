@@ -1,6 +1,7 @@
 import pytest
 from literature_ingest.pmc import PMCFTPClient
 
+
 def test_pmc_connection():
     """Test that we can successfully connect to the PMC FTP server"""
     client = PMCFTPClient()
