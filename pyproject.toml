@@ -1,7 +1,9 @@
 [project]
 name = "literature_ingest"
 version = "0.1.0"
-authors = ["0.1.0 <mat.p.wasilewski@gmail.com>"]
+authors = [
+    {name = "Mat P. Wasilewski", email = "mat.p.wasilewski@gmail.com"}
+]
 description = ""
 readme = "README.md"
 requires-python = ">=3.11"
