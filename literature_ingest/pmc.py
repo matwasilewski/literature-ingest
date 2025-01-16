@@ -14,7 +14,7 @@ class PMCFTPClient:
         try:
             self.ftp = ftplib.FTP(self.host)
             self.ftp.login()  # anonymous login
-            self.ftp.cwd('/pub/pmc')  # Change to PMC directory
+            self.ftp.cwd('/pub/pmc/oa_bulk/oa_noncomm/xml/')  # Change to PMC directory
             print(f"Connected to {self.host}")
         except Exception as e:
             print(f"Failed to connect: {str(e)}")
@@ -52,19 +52,47 @@ class PMCFTPClient:
             self.ftp = None
             print("Connection closed")
 
+    def get_baseline_date(self) -> str:
+        """Extract the date from baseline files in the current directory"""
+        files = self.list_directory()
+        for file in files:
+            if 'baseline' in file:
+                # Extract date using string split on whitespace and take the date field
+                date_str = file.split()[0].split('.')[-3]
+                return date_str
+        raise ValueError("No baseline files found in directory")
+
+    def download_baselines(self, base_dir: str = 'data/baselines') -> None:
+        """Download all baseline files that don't exist locally"""
+        if not self.ftp:
+            raise ConnectionError("Not connected to FTP server")
+
+        # Create base directory if it doesn't exist
+        os.makedirs(base_dir, exist_ok=True)
+
+        # Get baseline date and create dated directory
+        baseline_date = self.get_baseline_date()
+        dated_dir = os.path.join(base_dir, baseline_date)
+        os.makedirs(dated_dir, exist_ok=True)
+
+        # Get list of remote files
+        remote_files = self.list_directory()
+        baseline_files = [f.split()[0] for f in remote_files if 'baseline' in f]
+
+        # Download missing files
+        for remote_file in baseline_files:
+            local_path = os.path.join(dated_dir, remote_file)
+            if not os.path.exists(local_path):
+                print(f"Downloading {remote_file}...")
+                self.download_file(remote_file, local_path)
+            else:
+                print(f"Skipping {remote_file} - already exists")
+
 def main():
-    # Example usage
     client = PMCFTPClient()
     try:
         client.connect()
-        print("\nDirectory listing:")
-        files = client.list_directory()
-        for file in files:
-            print(file)
-
-        # Example: Download the journal list file
-        # client.download_file('jlist.csv')
-
+        client.download_baselines()
     finally:
         client.close()
 
