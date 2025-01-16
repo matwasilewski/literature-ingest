@@ -1,0 +1,60 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+# Code formatting with Ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.8
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+        exclude: | 
+          (?x)^(
+            # Add any exclusions here
+          )
+      - id: ruff-format
+        exclude: |
+          (?x)^(
+            # Add any exclusions here
+          )
+# Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+    -   id: debug-statements
+    -   id: check-merge-conflict
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-added-large-files
+    -   id: check-yaml
+    -   id: check-json
+    -   id: mixed-line-ending
+# Remove output cells from notebooks
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.7.1
+    hooks:
+      - id: nbstripout
+        exclude: | 
+          (?x)^(
+            # Add any exclusions here
+          )
+# Terraform formatting
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.92.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_docs
+# Check github actions files for errors
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.1
+    hooks:
+      - id: actionlint
+# Run Makefile Lint Target
+#   - repo: local
+#     hooks:
+#     -   id: lint
+#         name: Run Makefile Lint Target
+#         entry: make lint
+#         language: system
+#         pass_filenames: false
+#         stages: [push]
+
