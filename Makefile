@@ -62,6 +62,8 @@ lint:
 	ruff check .
 	mypy .
 
-test:
-	pytest
-	
+unit: $(VENV_ACTIVATE)
+	uv run pytest tests/unit/
+
+integration: $(VENV_ACTIVATE)
+	uv run pytest tests/integration/
