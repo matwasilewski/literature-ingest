@@ -32,7 +32,7 @@ def cli():
     help="Source to download from (currently supports: PMC)",
     type=str,
 )
-def get_file(file: str, target: Path, source: str):
+def get_file(file: str, target: Path, source: str) -> None :
     """Download a file from the specified source."""
     target = convert_to_cloudpath(target)
     if target.is_dir():
@@ -45,12 +45,6 @@ def get_file(file: str, target: Path, source: str):
 
 @cli.command()
 @click.option(
-    "--source",
-    default="PMC",
-    help="Source to download from (currently supports: PMC)",
-    type=str,
-)
-@click.option(
     "--dry-run",
     is_flag=True,
     help="Show what would be downloaded without actually downloading",
@@ -61,13 +55,13 @@ def get_file(file: str, target: Path, source: str):
     help="Directory to store downloaded baseline files",
     type=Path,
 )
-def download_baselines(source: str, dry_run: bool, base_dir: Path):
-    """Download baseline files from the specified source."""
+def download_pmc_baselines(dry_run: bool, base_dir: Path):
+    """Download baseline files from the PMC FTP server."""
     base_dir = convert_to_cloudpath(base_dir)
 
-    client = get_client(source)
+    client = get_client("PMC")
     try:
-        logger.info(f"Connecting to {source} server...")
+        logger.info(f"Connecting to PMC FTP server...")
         client.connect()
 
         logger.info(f"Downloading baselines to {base_dir}")
