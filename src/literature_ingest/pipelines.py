@@ -28,11 +28,12 @@ def parse_pmc_docs_sample():
     print(f"Unzipping {source_dir}...")
     for file in source_dir.glob("*.tar.gz"):
         print(f"Unzipping {file}...")
-        unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
+        unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=False)
     print(f"Unzipped {unzipped_dir}...")
 
     print(f"Parsing {unzipped_dir}...")
-    parsed_files = parser.parse_docs(unzipped_dir, parsed_dir)
+    unzipped_files = [Path(x) for x in list(unzipped_dir.glob("*.xml"))]
+    parsed_files = parser.parse_docs(unzipped_files, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print(f"Unique article types: {parser.unique_article_types}")
 

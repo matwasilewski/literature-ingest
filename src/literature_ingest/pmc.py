@@ -460,10 +460,14 @@ class PMCParser:
 
         for file in files:
             file_name = file.name
-            with file.open(mode='r') as f:
-                doc = self.parse_doc(f.read())
+            try:
+                with file.open(mode='r') as f:
+                    doc = self.parse_doc(f.read())
 
-            with open(output_dir / file_name, 'w') as f:
-                f.write(doc.to_raw_text())
-            documents.append(output_dir / file_name)
+                with open(output_dir / file_name, 'w') as f:
+                    f.write(doc.to_raw_text())
+                documents.append(output_dir / file_name)
+            except Exception as e:
+                log.error(f"Error parsing {file_name}: {str(e)}")
+                continue
         return documents
