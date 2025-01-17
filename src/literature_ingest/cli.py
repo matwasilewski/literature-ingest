@@ -17,14 +17,14 @@ def cli():
     """Literature ingest CLI tool for downloading and processing PMC articles."""
     pass
 
-@click.command()
-@click.option(
-    "--file",
+@cli.command()
+@click.argument(
+    "file",
     type=str,
     help="File to download",
 )
-@click.option(
-    "--target",
+@click.argument(
+    "target",
     type=Path,
     help="Target directory or path to download file to",
 )
