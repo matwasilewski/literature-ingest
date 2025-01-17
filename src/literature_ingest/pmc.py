@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import defaultdict
 import ftplib
 from literature_ingest.utils.logging import log
 from typing import Dict, List, Optional, Tuple
@@ -164,7 +165,7 @@ class PMCFTPClient:
 
 class PMCParser:
     def __init__(self):
-        self.unique_article_types = set()
+        self.unique_article_types = defaultdict(int)
         pass
 
     def _extract_authors(self, contrib_group) -> List[Author]:
@@ -364,7 +365,7 @@ class PMCParser:
         # Extract front matter which contains metadata
         front = root.find(".//front")
 
-        self.unique_article_types.add(root.get("article-type", None))
+        self.unique_article_types[root.get("article-type", None)] += 1
         # Get article type
         if root.get("article-type", None) is None or root.get("article-type", None) not in PMC_ARTICLE_TYPE_MAP:
             log.warn(f"Article type not found in {root.get('article-type', None)}")
@@ -471,15 +472,16 @@ class PMCParser:
         documents = []
 
         for file in files:
-            file_name = file.name
+            file_name = file.stem + '.json'
+
             try:
                 with file.open(mode='r') as f:
                     doc = self.parse_doc(f.read())
 
                 with open(output_dir / file_name, 'w') as f:
-                    f.write(doc.to_raw_text())
+                    f.write(doc.model_dump_json(indent=2))
                 documents.append(output_dir / file_name)
             except Exception as e:
-                log.error(f"Error parsing {file_name}: {str(e)}")
+                log.error(f"Error parsing {file.name}: {str(e)}")
                 continue
         return documents
