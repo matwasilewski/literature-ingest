@@ -1,5 +1,5 @@
 import pytest
-from src.literature_ingest.pmc import PMCFTPClient
+from src.literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PMCFTPClient
 
 
 def test_pmc_connection():
@@ -9,7 +9,7 @@ def test_pmc_connection():
         # Test connection
         client.connect()
         assert client.ftp is not None
-        assert client.ftp.pwd() == '/pub/pmc'  # Verify we're in the correct directory
+        assert client.ftp.pwd() == PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR
 
         # Test basic directory listing
         files = client.list_directory()

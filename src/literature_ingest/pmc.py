@@ -4,10 +4,13 @@ import ftplib
 import os
 from typing import List, Optional
 
+PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
+PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR = '/pub/pmc/oa_bulk/oa_noncomm/xml'
+
 class PMCFTPClient:
     def __init__(self):
-        self.host = "ftp.ncbi.nlm.nih.gov"
-        self.pmc_open_access_noncommercial_xml_dir = '/pub/pmc/oa_bulk/oa_noncomm/xml/'
+        self.host = PMC_FTP_HOST
+        self.pmc_open_access_noncommercial_xml_dir = PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR
         self.ftp = None
 
     def connect(self) -> None:
