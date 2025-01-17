@@ -4,3 +4,4 @@
 **/.coverage
 **/__pycache__
 literature_ingest.egg-info/*
+src/literature_ingest.egg-info/*
