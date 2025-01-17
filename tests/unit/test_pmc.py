@@ -316,7 +316,7 @@ def test_document_load_from_json():
     json_str = original_doc.to_json()
 
     # Load back from JSON
-    loaded_doc = Document.from_json(json_str)
+    loaded_doc = Document.model_validate_json(json_str)
 
     # Verify core fields
     assert loaded_doc.id == original_doc.id
