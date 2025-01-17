@@ -2,7 +2,7 @@
 
 import ftplib
 import os
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 import re
 
 from click import Path
@@ -34,6 +34,7 @@ class PMCFTPClient:
 
         files = []
         self.ftp.dir(path, files.append)
+        files = [f.split()[-1] for f in files]
         return files
 
     def download_file(self, remote_file: str, local_path: Optional[str] = None) -> None:
@@ -59,16 +60,25 @@ class PMCFTPClient:
             self.ftp = None
             print("Connection closed")
 
-    def get_baseline_date(self) -> str:
+    def extract_baseline_files(self, files: List[str]) -> Tuple[str, List[str]]:
         """Extract the date from baseline files in the current directory"""
-        files = self.list_directory()
+        baseline_dates = set()
+        baseline_files = []
+
         for file in files:
             if 'baseline' in file:
                 # Use regex to find date pattern YYYY-MM-DD between dots
                 match = re.search(r'\.(\d{4}-\d{2}-\d{2})\.' , file)
-                if match:
-                    return match.group(1)
-        raise ValueError("No baseline files found in directory")
+                if not match:
+                    raise ValueError(f"Found a file with `baseline` string but no date: {file}")
+
+                baseline_dates.add(match.group(1))
+                baseline_files.append(file)
+
+        if len(baseline_dates) != 1:
+            raise ValueError(f"Exactly one baseline date is expected, found {len(baseline_dates)}: {baseline_dates}")
+
+        return baseline_dates.pop(), baseline_files
 
     def download_baselines(self, base_dir: Path = Path('data/baselines'), dry_run: bool = False) -> None:
         """Download all baseline files that don't exist locally.
@@ -85,16 +95,13 @@ class PMCFTPClient:
 
         os.makedirs(base_dir, exist_ok=True)
 
-        baseline_date = self.get_baseline_date()
-        dated_dir = os.path.join(base_dir, baseline_date)
+        raw_file_names = self.list_directory()
+        baseline_dates, baseline_files = self.extract_baseline_files(raw_file_names)
+        dated_dir = os.path.join(base_dir, baseline_dates[0])
         os.makedirs(dated_dir, exist_ok=True)
 
-        # Get list of remote files
-        remote_files = self.list_directory()
-        baseline_files = [f.split()[0] for f in remote_files if 'baseline' in f]
-
         # Download missing files
-        for remote_file in baseline_files:
+        for file_date, remote_file in zip(baseline_dates, baseline_files):
             local_path = os.path.join(dated_dir, remote_file)
             if not os.path.exists(local_path):
                 if not dry_run:
