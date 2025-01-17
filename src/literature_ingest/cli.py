@@ -73,5 +73,35 @@ def download_pmc_baselines(dry_run: bool, base_dir: Path):
     finally:
         client.close()
 
+@cli.command()
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be downloaded without actually downloading",
+)
+@click.option(
+    "--base-dir",
+    default=Path("data/incremental"),
+    help="Directory to store downloaded incremental files",
+    type=Path,
+)
+def download_pmc_incremental(dry_run: bool, base_dir: Path):
+    """Download incremental files from the PMC FTP server."""
+    base_dir = convert_to_cloudpath(base_dir)
+
+    client = get_client("PMC")
+    try:
+        logger.info(f"Connecting to PMC FTP server...")
+        client.connect()
+
+        logger.info(f"Downloading incremental to {base_dir}")
+        client.download_incremental(base_dir=base_dir, dry_run=dry_run)
+
+    except Exception as e:
+        logger.error(f"Error downloading incremental: {str(e)}")
+        raise click.ClickException(str(e))
+    finally:
+        client.close()
+
 if __name__ == "__main__":
     cli()
