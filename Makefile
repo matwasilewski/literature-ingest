@@ -41,7 +41,6 @@ full_test:
 format:
 	uv run ruff check . --fix
 
-
 lock:
 	uv pip compile requirements.in > requirements.txt
 
@@ -63,7 +62,7 @@ lint:
 	mypy .
 
 unit: venv
-	uv run pytest tests/unit/
+	uv run pytest -s tests/unit/
 
 integration: venv
-	uv run pytest tests/integration/
+	uv run pytest -s tests/integration/
