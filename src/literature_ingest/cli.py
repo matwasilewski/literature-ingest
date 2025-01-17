@@ -219,5 +219,9 @@ def parse_docs(input_dir: str, output_dir: str, format: str, pattern: str):
         logger.error(f"Error processing documents: {str(e)}")
         raise click.ClickException(str(e))
 
+@cli.command()
+def parse_pmc_docs_sample():
+    parse_pmc_docs_sample()
+
 if __name__ == "__main__":
     cli()
