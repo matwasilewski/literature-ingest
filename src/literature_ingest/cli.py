@@ -1,4 +1,6 @@
+from pathlib import Path
 import click
+from cloudpathlib import CloudPath
 from literature_ingest.pmc import PMCFTPClient
 from literature_ingest.utils.logging import get_logger
 
@@ -17,12 +19,16 @@ def cli():
 )
 @click.option(
     "--base-dir",
-    default="data/baselines",
+    default=Path("data/baselines"),
     help="Directory to store downloaded baseline files",
-    type=click.Path(),
+    type=Path,
 )
-def download_baselines(dry_run: bool, base_dir: click.Path):
+def download_baselines(dry_run: bool, base_dir: Path):
     """Download baseline files from PMC FTP server."""
+    # Convert to CloudPath if it's a cloud storage path
+    if str(base_dir).startswith(("s3://", "gs://", "az://")):
+        base_dir = CloudPath(str(base_dir))
+
     client = PMCFTPClient()
     try:
         logger.info("Connecting to PMC FTP server...")
