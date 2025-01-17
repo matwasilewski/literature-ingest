@@ -64,17 +64,17 @@ class Document(BaseModel):
 
     # Basic metadata
     title: str
-    type: ArticleType
+    type: Optional[ArticleType] = None
 
     # Journal information
-    journal: JournalMetadata
+    journal: Optional[JournalMetadata] = None
 
     # Dates
-    year: int
+    year: Optional[int] = None
     publication_dates: PublicationDates = PublicationDates()
 
     # Content
-    abstract: str
+    abstract: Optional[str] = None
     keywords: List[str] = []
 
     # Contributors
