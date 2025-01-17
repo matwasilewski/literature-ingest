@@ -177,5 +177,5 @@ class PMCParser:
     def __init__(self):
         pass
 
-    def parse_file(self, file: Path) -> Document:
-        pass
+    def parse_doc(self, file_contents: str) -> Document:
+        return Document()
