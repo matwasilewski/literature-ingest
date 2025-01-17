@@ -1,3 +1,7 @@
 pytest
 click
 cloudpath
+ujson
+json_log_formatter
+tomlkit
+pydantic_settings
