@@ -89,8 +89,24 @@ class PMCFTPClient:
 
         return baseline_files
 
+    def download_files(self, files: List[str], base_dir: Path, dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+        """Download all files that don't exist locally."""
+        target_file_paths = []
 
-    def download_incremental(self, base_dir: Path = Path('data/incremental'), dry_run: bool = False) -> None:
+        for remote_file in files:
+            target_file_path = base_dir / remote_file
+            if not target_file_path.exists() or overwrite:
+                if not dry_run:
+                    print(f"Downloading {remote_file}...")
+                    self.download_file(remote_file, target_file_path)
+                    target_file_paths.append(target_file_path)
+                else:
+                    print(f"Would download {remote_file} to {target_file_path}")
+            else:
+                print(f"Skipping {remote_file}")
+        return target_file_paths
+
+    def download_incremental(self, base_dir: Path = Path('data/incremental'), dry_run: bool = False) -> List[Path]:
         """Download all incremental files that don't exist locally."""
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
@@ -109,20 +125,11 @@ class PMCFTPClient:
         dated_dir.mkdir(parents=True, exist_ok=True)
 
         incremental_files = self.extract_incremental_files(raw_file_names)
+        downloaded_files = self.download_files(incremental_files, dated_dir, dry_run=dry_run, overwrite=False)
 
-        # Download missing files
-        for remote_file in incremental_files:
-            target_file_path = dated_dir / remote_file
-            if not target_file_path.exists():
-                if not dry_run:
-                    print(f"Downloading {remote_file}...")
-                    self.download_file(remote_file, target_file_path)
-                else:
-                    print(f"Would download {remote_file} to {target_file_path}")
-            else:
-                print(f"Skipping {remote_file} - already exists")
+        return downloaded_files
 
-    def download_baselines(self, base_dir: Path = Path('data/baselines'), dry_run: bool = False) -> None:
+    def download_baselines(self, base_dir: Path = Path('data/baselines'), dry_run: bool = False) -> List[Path]:
         """Download all baseline files that don't exist locally.
 
         Baseline files is a batch of PMC documents that should contain all PMC documents released up to a certain date.
@@ -148,17 +155,8 @@ class PMCFTPClient:
         dated_dir = base_dir / baseline_date
         dated_dir.mkdir(parents=True, exist_ok=True)
 
-        # Download missing files
-        for remote_file in baseline_files:
-            target_file_path = dated_dir / remote_file
-            if not target_file_path.exists():
-                if not dry_run:
-                    print(f"Downloading {remote_file}...")
-                    self.download_file(remote_file, target_file_path)
-                else:
-                    print(f"Would download {remote_file} to {target_file_path}")
-            else:
-                print(f"Skipping {remote_file} - already exists")
+        downloaded_files = self.download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=False)
+        return downloaded_files
 
 def main():
     client = PMCFTPClient()
