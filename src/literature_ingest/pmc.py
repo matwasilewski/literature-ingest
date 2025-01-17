@@ -8,6 +8,7 @@ from cloudpathlib import CloudPath
 
 
 from click import Path
+from pydantic import BaseModel
 
 PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
 PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR = '/pub/pmc/oa_bulk/oa_noncomm/xml'
@@ -159,10 +160,22 @@ class PMCFTPClient:
         return downloaded_files
 
 
+class DocumentId(BaseModel):
+    id: str
+    type: str
+
+class Document(BaseModel):
+    id: DocumentId
+    title: str
+    authors: List[str]
+    abstract: str
+    type: str
+    journal: str
+    year: int
 
 class PMCParser:
     def __init__(self):
         pass
 
-    def parse_baseline(self, file: Path) -> List[str]:
+    def parse_file(self, file: Path) -> Document:
         pass
