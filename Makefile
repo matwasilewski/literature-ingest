@@ -63,7 +63,7 @@ lint:
 	mypy .
 
 unit: venv
-	uv run pytest tests/unit/
+	$(UV_PYTHON) -m pytest tests/unit/
 
 integration: venv
-	uv run pytest tests/integration/
+	$(UV_PYTHON) -m pytest tests/integration/
