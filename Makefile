@@ -37,7 +37,7 @@ precommit-hooks:
 
 full_test:
 	# activate venv to ensure spark doesn't have python driver mismatches
-	uv run pytest -v tests/
+	$(UV_PYTHON) -m pytest -v tests/
 
 format:
 	uv run ruff check . --fix
@@ -64,7 +64,7 @@ lint:
 	mypy .
 
 unit: $(VENV_ACTIVATE)
-	uv run pytest tests/unit/
+	$(UV_PYTHON) -m pytest tests/unit/
 
 integration: $(VENV_ACTIVATE)
-	uv run pytest tests/integration/
+	$(UV_PYTHON) -m pytest tests/integration/
