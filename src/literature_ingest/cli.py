@@ -12,6 +12,12 @@ def convert_to_cloudpath(path: Path) -> Union[CloudPath, Path]:
         return CloudPath(str(path))
     return path
 
+def get_client(source: str):
+    """Get the appropriate client based on source."""
+    if source.upper() == "PMC":
+        return PMCFTPClient()
+    raise click.ClickException(f"Unknown source: {source}")
+
 @click.group()
 def cli():
     """Literature ingest CLI tool for downloading and processing PMC articles."""
@@ -20,18 +26,30 @@ def cli():
 @cli.command()
 @click.argument("file", type=str)
 @click.argument("target", type=Path)
-def get_file(file: str, target: Path):
-    """Download a file from PMC FTP server."""
+@click.option(
+    "--source",
+    default="PMC",
+    help="Source to download from (currently supports: PMC)",
+    type=str,
+)
+def get_file(file: str, target: Path, source: str):
+    """Download a file from the specified source."""
     target = convert_to_cloudpath(target)
     if target.is_dir():
         target = target / file
-    client = PMCFTPClient()
+    client = get_client(source)
     client.connect()
     client.download_file(file, target)
     client.close()
     click.echo(f"Downloaded {file} to {target}")
 
 @cli.command()
+@click.option(
+    "--source",
+    default="PMC",
+    help="Source to download from (currently supports: PMC)",
+    type=str,
+)
 @click.option(
     "--dry-run",
     is_flag=True,
@@ -43,13 +61,13 @@ def get_file(file: str, target: Path):
     help="Directory to store downloaded baseline files",
     type=Path,
 )
-def download_baselines(dry_run: bool, base_dir: Path):
-    """Download baseline files from PMC FTP server."""
+def download_baselines(source: str, dry_run: bool, base_dir: Path):
+    """Download baseline files from the specified source."""
     base_dir = convert_to_cloudpath(base_dir)
 
-    client = PMCFTPClient()
+    client = get_client(source)
     try:
-        logger.info("Connecting to PMC FTP server...")
+        logger.info(f"Connecting to {source} server...")
         client.connect()
 
         logger.info(f"Downloading baselines to {base_dir}")
