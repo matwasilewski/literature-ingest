@@ -60,7 +60,7 @@ class Section(BaseModel):
     """Represents a section in the document"""
     id: Optional[str] = None  # section id if present
     label: Optional[str] = None  # section number/label if present
-    title: str
+    title: Optional[str] = None
     text: str
     subsections: List['Section'] = []  # recursive for nested sections
 

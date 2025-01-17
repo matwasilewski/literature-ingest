@@ -347,16 +347,13 @@ def test_document_load_from_json():
     assert loaded_doc.publication_dates.accepted_date == original_doc.publication_dates.accepted_date
     assert loaded_doc.publication_dates.epub_date == original_doc.publication_dates.epub_date
 
-
-
-def test_parse_doc_with_error(pmc_doc_2):
+@pytest.mark.parametrize("pmc_doc_fixture", [
+    "pmc_doc_2",
+    "pmc_doc_3",
+    "pmc_doc_4",
+    "pmc_doc_5",
+])
+def test_parse_doc_with_error(request, pmc_doc_fixture):
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc_2)
-    assert doc
-
-
-
-def test_parse_doc_with_error_2(pmc_doc_3):
-    parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc_3)
+    doc = parser.parse_doc(request.getfixturevalue(pmc_doc_fixture))
     assert doc

@@ -178,8 +178,9 @@ class PMCParser:
                 # Get full text content of affiliation including nested elements
                 aff_text = ''.join(aff.itertext()).strip()
                 # Remove the label if it exists
-                if aff_text.startswith(aff.find('label').text):
-                    aff_text = aff_text[len(aff.find('label').text):].strip()
+                label_elem = aff.find('label')
+                if label_elem is not None and label_elem.text and aff_text.startswith(label_elem.text):
+                    aff_text = aff_text[len(label_elem.text):].strip()
                 affiliations[aff_id] = aff_text
 
         for contrib in contrib_group.findall(".//contrib[@contrib-type='author']"):
@@ -330,6 +331,10 @@ class PMCParser:
 
             # Get section text content
             text = self._extract_section_text(sec)
+
+            if text is None:
+                continue
+
 
             # Create section object
             section = Section(
