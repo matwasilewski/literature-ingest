@@ -150,5 +150,74 @@ def download_pmc_incremental(dry_run: bool, base_dir: Path, overwrite: bool):
     finally:
         client.close()
 
+@cli.command()
+@click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
+@click.argument("output_dir", type=click.Path(file_okay=False))
+@click.option(
+    "--format",
+    type=click.Choice(["raw", "json"]),
+    default="raw",
+    help="Output format (raw text or JSON)",
+)
+@click.option(
+    "--pattern",
+    default="*.xml",
+    help="File pattern to match (e.g. *.xml)",
+    type=str,
+)
+def parse_docs(input_dir: str, output_dir: str, format: str, pattern: str):
+    """Parse multiple PMC XML documents from a directory.
+
+    INPUT_DIR: Directory containing PMC XML files
+    OUTPUT_DIR: Directory where parsed documents should be saved
+    """
+    try:
+        input_path = Path(input_dir)
+        output_path = Path(output_dir)
+
+        # Create output directory if it doesn't exist
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # Get all XML files in input directory
+        xml_files = list(input_path.glob(pattern))
+        if not xml_files:
+            raise click.ClickException(f"No files matching pattern '{pattern}' found in {input_dir}")
+
+        logger.info(f"Found {len(xml_files)} files to process")
+        parser = PMCParser()
+
+        # Process each file
+        for xml_file in xml_files:
+            try:
+                # Read input file
+                with open(xml_file, 'r') as f:
+                    xml_content = f.read()
+
+                # Parse document
+                doc = parser.parse_doc(xml_content)
+
+                # Create output filename with appropriate extension
+                output_ext = ".json" if format == "json" else ".txt"
+                output_file = output_path / (xml_file.stem + output_ext)
+
+                # Write output
+                with open(output_file, 'w') as f:
+                    if format == "raw":
+                        f.write(doc.to_raw_text())
+                    else:
+                        f.write(doc.to_json())
+
+                logger.info(f"Processed {xml_file.name} -> {output_file.name}")
+
+            except Exception as e:
+                logger.error(f"Error processing {xml_file.name}: {str(e)}")
+                continue
+
+        click.echo(f"Successfully processed {len(xml_files)} files")
+
+    except Exception as e:
+        logger.error(f"Error processing documents: {str(e)}")
+        raise click.ClickException(str(e))
+
 if __name__ == "__main__":
     cli()
