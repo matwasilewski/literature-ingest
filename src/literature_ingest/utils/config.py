@@ -17,7 +17,7 @@ def _get_project_meta(name: str = "unknown") -> Dict:
     try:
         with Path("./pyproject.toml").open() as pyproject:
             file_contents = pyproject.read()
-        parsed = dict(tomlkit.parse(file_contents))["tool"]["poetry"]
+        parsed = dict(tomlkit.parse(file_contents))['project']
         name = parsed["name"]
         version = parsed.get("version", "unknown")
         description = parsed.get("description", "")
