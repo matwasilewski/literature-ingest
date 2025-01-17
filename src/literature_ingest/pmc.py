@@ -7,6 +7,7 @@ from typing import List, Optional
 class PMCFTPClient:
     def __init__(self):
         self.host = "ftp.ncbi.nlm.nih.gov"
+        self.pmc_open_access_noncommercial_xml_dir = '/pub/pmc/oa_bulk/oa_noncomm/xml/'
         self.ftp = None
 
     def connect(self) -> None:
@@ -14,8 +15,8 @@ class PMCFTPClient:
         try:
             self.ftp = ftplib.FTP(self.host)
             self.ftp.login()  # anonymous login
-            self.ftp.cwd('/pub/pmc/oa_bulk/oa_noncomm/xml/')  # Change to PMC directory
-            print(f"Connected to {self.host}")
+            self.ftp.cwd(self.pmc_open_access_noncommercial_xml_dir)
+            print(f"Connected to {self.host} and changed to {self.pmc_open_access_noncommercial_xml_dir}")
         except Exception as e:
             print(f"Failed to connect: {str(e)}")
             raise
