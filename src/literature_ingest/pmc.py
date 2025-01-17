@@ -164,6 +164,7 @@ class PMCFTPClient:
 
 class PMCParser:
     def __init__(self):
+        self.unique_article_types = set()
         pass
 
     def _extract_authors(self, contrib_group) -> List[Author]:
@@ -355,6 +356,7 @@ class PMCParser:
         # Extract front matter which contains metadata
         front = root.find(".//front")
 
+        self.unique_article_types.add(root.get("article-type", None))
         # Get article type
         if root.get("article-type", None) is None or root.get("article-type", None) not in PMC_ARTICLE_TYPE_MAP:
             log.warn(f"Article type not found in {root.get('article-type', None)}")
