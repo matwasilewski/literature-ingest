@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import ftplib
-import os
 from typing import Dict, List, Optional, Tuple
 import re
 from cloudpathlib import CloudPath
+import xml.etree.ElementTree as ET
 
 
 from click import Path
@@ -177,5 +177,72 @@ class PMCParser:
     def __init__(self):
         pass
 
+    def _extract_authors(self, contrib_group) -> List[str]:
+        """Extract author names from contrib-group element"""
+        authors = []
+        for contrib in contrib_group.findall(".//contrib[@contrib-type='author']"):
+            name = contrib.find(".//name")
+            if name is not None:
+                surname = name.find("surname").text if name.find("surname") is not None else ""
+                given_names = name.find("given-names").text if name.find("given-names") is not None else ""
+                authors.append(f"{surname}, {given_names}")
+        return authors
+
+    def _extract_abstract(self, front) -> str:
+        """Extract abstract text from front element"""
+        abstract = front.find(".//abstract")
+        if abstract is None:
+            return ""
+
+        # Combine all paragraph texts
+        paragraphs = []
+        for p in abstract.findall(".//p"):
+            if p.text:
+                paragraphs.append(p.text.strip())
+        return " ".join(paragraphs)
+
     def parse_doc(self, file_contents: str) -> Document:
-        return Document()
+        """Parse PMC XML document and extract relevant information"""
+        root = ET.fromstring(file_contents)
+
+        # Extract front matter which contains metadata
+        front = root.find(".//front")
+
+        # Get article type
+        article_type = root.get("article-type", "")
+
+        # Get PMC ID
+        article_meta = front.find(".//article-meta")
+        pmc_id = None
+        for article_id in article_meta.findall(".//article-id"):
+            if article_id.get("pub-id-type") == "pmc":
+                pmc_id = article_id.text
+                break
+
+        # Get title
+        title = article_meta.find(".//article-title").text
+
+        # Get journal title
+        journal_meta = front.find(".//journal-meta")
+        journal = journal_meta.find(".//journal-title").text
+
+        # Get publication year
+        pub_date = article_meta.find(".//pub-date[@pub-type='collection']")
+        year = int(pub_date.find("year").text)
+
+        # Get authors
+        contrib_group = article_meta.find(".//contrib-group")
+        authors = self._extract_authors(contrib_group)
+
+        # Get abstract
+        abstract = self._extract_abstract(front)
+
+        return Document(
+            id=DocumentId(id=pmc_id, type="pmc"),
+            title=title,
+            authors=authors,
+            abstract=abstract,
+            type=article_type,
+            journal=journal,
+            year=year
+        )
