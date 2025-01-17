@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import ftplib
+from logging import log
 from typing import Dict, List, Optional, Tuple
 import re
 from cloudpathlib import CloudPath
@@ -8,6 +9,7 @@ import xml.etree.ElementTree as ET
 
 
 from click import Path
+from literature_ingest.models import PMC_ARTICLE_TYPE_MAP, ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates
 from pydantic import BaseModel
 
 PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
@@ -304,7 +306,8 @@ class PMCParser:
         front = root.find(".//front")
 
         # Get article type
-        article_type = root.get("article-type", "")
+        log.warning(f"Article type: {root.get('article-type')}")
+        article_type = PMC_ARTICLE_TYPE_MAP.get(root.get("article-type", None), ArticleType.OTHER)
 
         # Get article meta section
         article_meta = front.find(".//article-meta")

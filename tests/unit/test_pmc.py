@@ -1,3 +1,4 @@
+from literature_ingest.models import ArticleType
 import pytest
 from unittest.mock import Mock
 from literature_ingest.pmc import (
@@ -43,7 +44,7 @@ def test_parse_doc_basic_fields(pmc_doc):
 
     # Test basic metadata
     assert doc.title == "Maternal and fetal outcomes in pregnant women with pulmonary hypertension: The impact of left heart disease"
-    assert doc.type == "research-article"
+    assert doc.type == ArticleType.RESEARCH_ARTICLE
 
     # Test journal metadata
     assert isinstance(doc.journal, JournalMetadata)
