@@ -356,8 +356,11 @@ class PMCParser:
         front = root.find(".//front")
 
         # Get article type
-        log.warn(f"Article type: {root.get('article-type')}")
-        article_type = PMC_ARTICLE_TYPE_MAP.get(root.get("article-type", None), ArticleType.OTHER)
+        if root.get("article-type", None) is None or root.get("article-type", None) not in PMC_ARTICLE_TYPE_MAP:
+            log.warn(f"Article type not found in {root.get('article-type', None)}")
+            article_type = None
+        else:
+            article_type = PMC_ARTICLE_TYPE_MAP.get(root.get("article-type"), ArticleType.OTHER)
 
         # Get article meta section
         article_meta = front.find(".//article-meta")

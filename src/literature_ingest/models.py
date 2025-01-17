@@ -23,7 +23,6 @@ PMC_ARTICLE_TYPE_MAP = {
     "letter": ArticleType.LETTER,
     "article-commentary": ArticleType.COMMENT,
     "news": ArticleType.NEWS,
-    None: None,
 }
 
 
