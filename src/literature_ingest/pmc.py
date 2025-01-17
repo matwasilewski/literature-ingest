@@ -448,3 +448,17 @@ class PMCParser:
             copyright_statement=copyright_statement,
             copyright_year=copyright_year
         )
+
+    def parse_docs(self, files: List[Path], output_dir: Path) -> List[Path]:
+        """Parse a list of PMC XML files and save to output_dir"""
+        documents = []
+
+        for file in files:
+            file_name = file.name
+            with file.open(mode='r') as f:
+                doc = self.parse_doc(f.read())
+
+            with open(output_dir / file_name, 'w') as f:
+                f.write(doc.to_raw_text())
+            documents.append(output_dir / file_name)
+        return documents
