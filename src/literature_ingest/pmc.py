@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 
 
 from click import Path
-from literature_ingest.models import PMC_ARTICLE_TYPE_MAP, ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates
+from literature_ingest.models import PMC_ARTICLE_TYPE_MAP, ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, Section
 from pydantic import BaseModel
 
 PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
@@ -298,6 +298,56 @@ class PMCParser:
                 paragraphs.append(p.text.strip())
         return " ".join(paragraphs)
 
+    def _extract_section_text(self, section_elem) -> str:
+        """Extract all text content from a section, including nested paragraphs"""
+        texts = []
+        for p in section_elem.findall(".//p"):
+            # Get all text content including from nested elements
+            text = ''.join(p.itertext()).strip()
+            if text:
+                texts.append(text)
+        return " ".join(texts)
+
+    def _extract_sections(self, body_elem, parent_section=None) -> List[Section]:
+        """Recursively extract sections from the document body"""
+        sections = []
+
+        # If we're parsing the body element itself, look for direct sec elements
+        xpath = "./sec" if parent_section is None else ".//sec"
+
+        for sec in body_elem.findall(xpath):
+            # Get section ID if present
+            section_id = sec.get("id")
+
+            # Get section label if present
+            label_elem = sec.find("label")
+            label = label_elem.text if label_elem is not None else None
+
+            # Get section title
+            title_elem = sec.find("title")
+            title = title_elem.text if title_elem is not None else "Untitled Section"
+
+            # Get section text content
+            text = self._extract_section_text(sec)
+
+            # Create section object
+            section = Section(
+                id=section_id,
+                label=label,
+                title=title,
+                text=text,
+                subsections=[]
+            )
+
+            # Recursively process subsections
+            subsections = self._extract_sections(sec, parent_section=section)
+            if subsections:
+                section.subsections = subsections
+
+            sections.append(section)
+
+        return sections
+
     def parse_doc(self, file_contents: str) -> Document:
         """Parse PMC XML document and extract relevant information"""
         root = ET.fromstring(file_contents)
@@ -375,6 +425,12 @@ class PMCParser:
         if copyright_year_elem is not None:
             copyright_year = copyright_year_elem.text
 
+        # Get the document body and extract sections
+        body = root.find(".//body")
+        sections = []
+        if body is not None:
+            sections = self._extract_sections(body)
+
         return Document(
             id=DocumentId(id=pmc_id, type="pmc"),
             other_ids=other_ids,
@@ -387,6 +443,7 @@ class PMCParser:
             keywords=keywords,
             authors=authors,
             subject_groups=subject_groups,
+            sections=sections,  # Add sections to the document
             license_type=license_type,
             copyright_statement=copyright_statement,
             copyright_year=copyright_year

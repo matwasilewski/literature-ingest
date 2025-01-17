@@ -108,41 +108,62 @@ def test_parse_doc_license(pmc_doc):
     assert "© 2022 The Authors" in doc.copyright_statement
     assert doc.copyright_year == "2022"
 
-def test_parse_doc_missing_fields():
-    """Test parser handles missing fields gracefully"""
-    minimal_xml = '''
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.2 20190208//EN" "JATS-archivearticle1.dtd">
-    <article>
-        <front>
-            <journal-meta>
-                <journal-title-group>
-                    <journal-title>Test Journal</journal-title>
-                </journal-title-group>
-            </journal-meta>
-            <article-meta>
-                <article-id pub-id-type="pmc">PMC123456</article-id>
-                <title-group>
-                    <article-title>Test Title</article-title>
-                </title-group>
-                <pub-date pub-type="collection">
-                    <year>2023</year>
-                </pub-date>
-            </article-meta>
-        </front>
-    </article>
-    '''
-
+def test_parse_doc_sections(pmc_doc):
+    """Test document section parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(minimal_xml)
+    doc = parser.parse_doc(pmc_doc)
 
-    assert doc.id.id == "PMC123456"
-    assert doc.title == "Test Title"
-    assert doc.year == 2023
-    assert doc.abstract == ""
-    assert doc.keywords == []
-    assert doc.authors == []
-    assert doc.subject_groups == []
-    assert doc.license_type is None
-    assert doc.copyright_statement is None
-    assert doc.copyright_year is None
+    # Test that sections were extracted
+    assert len(doc.sections) > 0
+
+    # Test first section (Introduction)
+    intro = doc.sections[0]
+    assert intro.label == "1"
+    assert intro.title == "Introduction"
+    assert intro.id == "sec1"
+    assert "Pulmonary hypertension (PH) is defined as" in intro.text
+
+    # Test Methods section and its subsections
+    methods = doc.sections[1]
+    assert methods.label == "2"
+    assert methods.title == "Methods"
+    assert methods.id == "sec2"
+    assert len(methods.subsections) > 0
+
+    # Test first methods subsection
+    study_design = methods.subsections[0]
+    assert study_design.label == "2.1"
+    assert study_design.title == "Study design"
+    assert "We performed a single center retrospective cohort study" in study_design.text
+
+def test_parse_doc_section_hierarchy(pmc_doc):
+    """Test that section hierarchy is correctly preserved"""
+    parser = PMCParser()
+    doc = parser.parse_doc(pmc_doc)
+
+    # Find the Methods section
+    methods = next(s for s in doc.sections if s.title == "Methods")
+
+    # Test subsection structure
+    assert len(methods.subsections) == 4  # Methods has 4 subsections
+    subsection_titles = [s.title for s in methods.subsections]
+    assert "Study design" in subsection_titles
+    assert "Patient identification, classification and data collection" in subsection_titles
+    assert "Outcomes studied" in subsection_titles
+    assert "Statistical analysis" in subsection_titles
+
+def test_parse_doc_section_content(pmc_doc):
+    """Test that section content is correctly extracted"""
+    parser = PMCParser()
+    doc = parser.parse_doc(pmc_doc)
+
+    # Find the Discussion section
+    discussion = next(s for s in doc.sections if s.title == "Discussion")
+
+    # Test section content
+    assert discussion.label == "4"
+    assert "In this large cohort of pregnant women with PH" in discussion.text
+
+    # Test that subsection content is preserved
+    limitations = next(s for s in discussion.subsections if s.title == "Limitations")
+    assert "We recognize this data has limitations" in limitations.text

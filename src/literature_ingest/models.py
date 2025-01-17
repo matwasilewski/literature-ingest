@@ -56,6 +56,15 @@ class PublicationDates(BaseModel):
     collection_date: Optional[str] = None
 
 
+class Section(BaseModel):
+    """Represents a section in the document"""
+    id: Optional[str] = None  # section id if present
+    label: Optional[str] = None  # section number/label if present
+    title: str
+    text: str
+    subsections: List['Section'] = []  # recursive for nested sections
+
+
 class Document(BaseModel):
     """Represents a PMC document with enhanced metadata"""
     # Core identifiers
@@ -76,6 +85,7 @@ class Document(BaseModel):
     # Content
     abstract: Optional[str] = None
     keywords: List[str] = []
+    sections: List[Section] = []  # Main sections of the document
 
     # Contributors
     authors: List[Author] = []
