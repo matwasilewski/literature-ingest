@@ -1,12 +1,22 @@
 from pathlib import Path
 import tarfile
 import tempfile
-import timeit
 from typing import List
 
 from cloudpathlib import CloudPath
 from functools import wraps
 import time
+
+def timeit(func):
+    @wraps(func)
+    def timeit_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        total_time = end_time - start_time
+        print(f'Function {func.__name__} Took {total_time:.4f} seconds')
+        return result
+    return timeit_wrapper
 
 def resolve_file_or_dir(target: Path, source: Path) -> Path:
     if target.is_dir():
@@ -26,25 +36,15 @@ def unzip_and_filter(archive_file: Path, target_dir: Path, extension = ".xml") -
     return files
 
 @timeit
-def upload_to_cloud(target_dir, local_files):
+def upload_to_cloud(target_dir, local_files, overwrite=False):
     files = []
     for file in local_files:
         target_file_path = target_dir / file.name
-        target_file_path.upload_from(file)
+        if target_file_path.exists() and not overwrite:
+            continue
+        target_file_path.upload_from(file, overwrite=overwrite)
         files.append(target_file_path)
     return files
-
-
-def timeit(func):
-    @wraps(func)
-    def timeit_wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        total_time = end_time - start_time
-        print(f'Function {func.__name__}{args} {kwargs} Took {total_time:.4f} seconds')
-        return result
-    return timeit_wrapper
 
 
 @timeit
