@@ -4,6 +4,8 @@ import ftplib
 import os
 from typing import List, Optional
 
+from click import Path
+
 PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
 PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR = '/pub/pmc/oa_bulk/oa_noncomm/xml'
 
@@ -66,7 +68,7 @@ class PMCFTPClient:
                 return date_str
         raise ValueError("No baseline files found in directory")
 
-    def download_baselines(self, base_dir: str = 'data/baselines', dry_run: bool = False) -> None:
+    def download_baselines(self, base_dir: Path = Path('data/baselines'), dry_run: bool = False) -> None:
         """Download all baseline files that don't exist locally.
 
         Baseline files is a batch of PMC documents that should contain all PMC documents released up to a certain date.

@@ -21,7 +21,7 @@ def cli():
     help="Directory to store downloaded baseline files",
     type=click.Path(),
 )
-def download_baselines(dry_run: bool, base_dir: str):
+def download_baselines(dry_run: bool, base_dir: click.Path):
     """Download baseline files from PMC FTP server."""
     client = PMCFTPClient()
     try:
