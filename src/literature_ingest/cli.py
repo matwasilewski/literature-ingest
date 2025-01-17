@@ -18,16 +18,8 @@ def cli():
     pass
 
 @cli.command()
-@click.argument(
-    "file",
-    type=str,
-    help="File to download",
-)
-@click.argument(
-    "target",
-    type=Path,
-    help="Target directory or path to download file to",
-)
+@click.argument("file", type=str)
+@click.argument("target", type=Path)
 def get_file(file: str, target: Path):
     """Download a file from PMC FTP server."""
     target = convert_to_cloudpath(target)
