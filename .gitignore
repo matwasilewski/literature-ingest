@@ -8,3 +8,4 @@ src/literature_ingest.egg-info/*
 src/literature_ingest.egg-info/dependency_links.txt
 logs/*
 secrets/*
+data/*
