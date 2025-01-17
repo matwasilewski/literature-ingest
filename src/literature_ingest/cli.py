@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union
 import click
 from cloudpathlib import CloudPath
-from literature_ingest.pmc import PMCFTPClient
+from literature_ingest.pmc import PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
 
 logger = get_logger(__name__, "info")
@@ -42,6 +42,43 @@ def get_file(file: str, target: Path, source: str) -> None :
     client.download_file(file, target)
     client.close()
     click.echo(f"Downloaded {file} to {target}")
+
+@cli.command()
+@click.argument("input_path", type=click.Path(exists=True, dir_okay=False))
+@click.argument("output_path", type=click.Path(dir_okay=False))
+@click.option(
+    "--format",
+    type=click.Choice(["raw", "json"]),
+    default="raw",
+    help="Output format (raw text or JSON)",
+)
+def parse_doc(input_path: str, output_path: str, format: str):
+    """Parse a single PMC XML document and save the output.
+
+    INPUT_PATH: Path to the input PMC XML file
+    OUTPUT_PATH: Path where the parsed document should be saved
+    """
+    try:
+        # Read input file
+        with open(input_path, 'r') as f:
+            xml_content = f.read()
+
+        # Parse document
+        parser = PMCParser()
+        doc = parser.parse_doc(xml_content)
+
+        # Write output based on format
+        with open(output_path, 'w') as f:
+            if format == "raw":
+                f.write(doc.to_raw_text())
+            else:
+                f.write(doc.to_json())
+
+        click.echo(f"Successfully parsed {input_path} and saved to {output_path}")
+
+    except Exception as e:
+        logger.error(f"Error parsing document: {str(e)}")
+        raise click.ClickException(str(e))
 
 @cli.command()
 @click.option(
