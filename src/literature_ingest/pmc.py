@@ -390,13 +390,8 @@ class PMCParser:
 
 
         # Get publication dates
-        year = None
-        pub_date = article_meta.find(".//pub-date[@pub-type='collection']")
-        if pub_date is not None and pub_date.find("year") is not None:
-            try:
-                year = int(pub_date.find("year").text)
-            except (ValueError, TypeError):
-                log.warn(f"Could not parse publication year: {pub_date.find('year').text}")
+        publication_dates = self._extract_dates(article_meta)
+        year = publication_dates.collection_date.split("-")[0] if publication_dates.collection_date is not None else None
 
         # Get authors
         contrib_group = article_meta.find(".//contrib-group")
