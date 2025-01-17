@@ -221,8 +221,13 @@ def parse_docs(input_dir: str, output_dir: str, format: str, pattern: str):
         raise click.ClickException(str(e))
 
 @cli.command()
-def parse_sample():
-    parse_pmc_docs_sample()
+@click.option(
+    "--start_from_parse",
+    is_flag=True,
+    help="Show what would be downloaded without actually downloading",
+)
+def parse_sample(start_from_parse: bool):
+    parse_pmc_docs_sample(start_from_parsed=start_from_parse)
 
 if __name__ == "__main__":
     cli()
