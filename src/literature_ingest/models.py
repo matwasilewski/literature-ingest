@@ -44,6 +44,9 @@ PMC_ARTICLE_TYPE_MAP = {
     "announcement": ArticleType.OTHER,
     "collection": ArticleType.OTHER,
     "introduction": ArticleType.OTHER,
+    "product-review": ArticleType.REVIEW,
+    "addendum": ArticleType.OTHER,
+    "rapid-communication": ArticleType.OTHER,
 }
 
 
