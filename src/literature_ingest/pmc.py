@@ -96,19 +96,19 @@ class PMCFTPClient:
         os.makedirs(base_dir, exist_ok=True)
 
         raw_file_names = self.list_directory()
-        baseline_dates, baseline_files = self.extract_baseline_files(raw_file_names)
-        dated_dir = os.path.join(base_dir, baseline_dates[0])
+        baseline_date, baseline_files = self.extract_baseline_files(raw_file_names)
+        dated_dir = os.path.join(base_dir, baseline_date)
         os.makedirs(dated_dir, exist_ok=True)
 
         # Download missing files
-        for file_date, remote_file in zip(baseline_dates, baseline_files):
-            local_path = os.path.join(dated_dir, remote_file)
-            if not os.path.exists(local_path):
+        for remote_file in baseline_files:
+            target_file_path = os.path.join(dated_dir, remote_file)
+            if not os.path.exists(target_file_path):
                 if not dry_run:
                     print(f"Downloading {remote_file}...")
-                    self.download_file(remote_file, local_path)
+                    self.download_file(remote_file, target_file_path)
                 else:
-                    print(f"Would download {remote_file} to {local_path}")
+                    print(f"Would download {remote_file} to {target_file_path}")
             else:
                 print(f"Skipping {remote_file} - already exists")
 
