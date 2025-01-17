@@ -3,6 +3,7 @@
 import ftplib
 import os
 from typing import List, Optional
+import re
 
 from click import Path
 
@@ -63,9 +64,10 @@ class PMCFTPClient:
         files = self.list_directory()
         for file in files:
             if 'baseline' in file:
-                # Extract date using string split on whitespace and take the date field
-                date_str = file.split()[0].split('.')[-3]
-                return date_str
+                # Use regex to find date pattern YYYY-MM-DD between dots
+                match = re.search(r'\.(\d{4}-\d{2}-\d{2})\.' , file)
+                if match:
+                    return match.group(1)
         raise ValueError("No baseline files found in directory")
 
     def download_baselines(self, base_dir: Path = Path('data/baselines'), dry_run: bool = False) -> None:
