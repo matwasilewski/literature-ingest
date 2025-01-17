@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import ftplib
-from logging import log
+from literature_ingest.utils.logging import log
 from typing import Dict, List, Optional, Tuple
 import re
 from cloudpathlib import CloudPath
@@ -306,7 +306,7 @@ class PMCParser:
         front = root.find(".//front")
 
         # Get article type
-        log.warning(f"Article type: {root.get('article-type')}")
+        log.warn(f"Article type: {root.get('article-type')}")
         article_type = PMC_ARTICLE_TYPE_MAP.get(root.get("article-type", None), ArticleType.OTHER)
 
         # Get article meta section
