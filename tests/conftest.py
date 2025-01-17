@@ -23,3 +23,8 @@ def pmc_doc_2(test_resources_root: Path) -> str:
 def pmc_doc_3(test_resources_root: Path) -> str:
     with open(test_resources_root / "PMC3717426.xml", "r") as f:
         return f.read()
+
+@pytest.fixture
+def pmc_doc_4(test_resources_root: Path) -> str:
+    with open(test_resources_root / "PMC_test_4.xml", "r") as f:
+        return f.read()
