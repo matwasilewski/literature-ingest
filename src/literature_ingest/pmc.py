@@ -67,7 +67,15 @@ class PMCFTPClient:
         raise ValueError("No baseline files found in directory")
 
     def download_baselines(self, base_dir: str = 'data/baselines', dry_run: bool = False) -> None:
-        """Download all baseline files that don't exist locally"""
+        """Download all baseline files that don't exist locally.
+
+        Baseline files is a batch of PMC documents that should contain all PMC documents released up to a certain date.
+        Baseline is then updated with new PMC documents released after the date in DAILY incremental updates.
+
+        Fundamental logic is that we download whatever baseline file is available, and then we download the daily incremental updates. If keeping up to date with latest PMC documents is important.
+
+        The date is extracted from the baseline file name.
+        """
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
 

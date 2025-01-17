@@ -1,9 +1,7 @@
-
 .PHONY: help check-bootstrap-dependencies check-tools check-docker bootstrap precommit install format type-check unit gcp-authenticate init-db install lint test load-data
 
 GIT_SHA ?= $(shell git rev-parse --short HEAD)
-export UV_PYTHON = .venv/bin/python
-export TQDM_DISABLE ?= 1
+UV_PYTHON = .venv/bin/python
 TARGET_PLATFORM ?= linux/amd64
 PREREQUISITES := docker gcloud python3 uv
 
@@ -22,6 +20,7 @@ prerequisites:
 venv: prerequisites
 	if [ ! -d .venv ]; then uv venv -p 3.11; fi
 	uv run python -m ensurepip --upgrade || true
+
 
 install: venv precommit-hooks
 	uv pip install -r requirements.txt #force it to install in our venv
@@ -63,8 +62,8 @@ lint:
 	ruff check .
 	mypy .
 
-unit: $(VENV_ACTIVATE)
-	$(UV_PYTHON) -m pytest tests/unit/
+unit: venv
+	uv run pytest tests/unit/
 
-integration: $(VENV_ACTIVATE)
-	$(UV_PYTHON) -m pytest tests/integration/
+integration: venv
+	uv run pytest tests/integration/
