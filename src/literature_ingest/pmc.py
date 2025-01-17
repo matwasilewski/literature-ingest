@@ -79,6 +79,49 @@ class PMCFTPClient:
 
         return baseline_dates.pop(), baseline_files
 
+    def extract_incremental_files(self, files: List[str]) -> List[str]:
+        """Extract the date from incremental files in the current directory"""
+        baseline_files = []
+
+        for file in files:
+            if '.incr.' in file:
+                baseline_files.append(file)
+
+        return baseline_files
+
+
+    def download_incremental(self, base_dir: Path = Path('data/incremental'), dry_run: bool = False) -> None:
+        """Download all incremental files that don't exist locally."""
+        if not self.ftp:
+            raise ConnectionError("Not connected to FTP server")
+
+        # Create base directory if it doesn't exist
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+        # Get list of remote files
+        raw_file_names = self.list_directory()
+
+        # Extract baseline date
+        baseline_date, _ = self.extract_baseline_files(raw_file_names)
+
+        # Create dated directory - it will be data/incremental/YYYY-MM-DD/*
+        dated_dir = base_dir / baseline_date
+        dated_dir.mkdir(parents=True, exist_ok=True)
+
+        incremental_files = self.extract_incremental_files(raw_file_names)
+
+        # Download missing files
+        for remote_file in incremental_files:
+            target_file_path = dated_dir / remote_file
+            if not target_file_path.exists():
+                if not dry_run:
+                    print(f"Downloading {remote_file}...")
+                    self.download_file(remote_file, target_file_path)
+                else:
+                    print(f"Would download {remote_file} to {target_file_path}")
+            else:
+                print(f"Skipping {remote_file} - already exists")
+
     def download_baselines(self, base_dir: Path = Path('data/baselines'), dry_run: bool = False) -> None:
         """Download all baseline files that don't exist locally.
 
