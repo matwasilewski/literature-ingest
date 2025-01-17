@@ -1,8 +1,6 @@
 from pathlib import Path
 import tarfile
 from typing import List
-import zipfile
-import requests
 
 def resolve_file_or_dir(target: Path, source: Path) -> Path:
     if target.is_dir():
