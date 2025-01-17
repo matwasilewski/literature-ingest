@@ -12,6 +12,7 @@ class ArticleType(str, Enum):
     LETTER = "Letter"
     COMMENT = "Comment"
     NEWS = "News"
+    CLINICAL_TRIAL = "Clinical Trial"
     OTHER = "Other"
 
 
