@@ -386,7 +386,8 @@ class PMCParser:
                 other_ids[id_type] = article_id.text
 
         # Get title
-        title = article_meta.find(".//article-title").text
+        title_elem = article_meta.find(".//article-title")
+        title = ''.join(title_elem.itertext()).strip() if title_elem is not None else None
 
         # Get journal metadata
         journal_meta = front.find(".//journal-meta")
