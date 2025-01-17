@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Union
 import click
 from cloudpathlib import CloudPath
+from literature_ingest.pipelines import parse_pmc_docs_sample
 from literature_ingest.pmc import PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
 
@@ -220,7 +221,7 @@ def parse_docs(input_dir: str, output_dir: str, format: str, pattern: str):
         raise click.ClickException(str(e))
 
 @cli.command()
-def parse_pmc_docs_sample():
+def parse_sample():
     parse_pmc_docs_sample()
 
 if __name__ == "__main__":
