@@ -79,10 +79,8 @@ class PMCFTPClient:
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
 
-        # Create base directory if it doesn't exist
         os.makedirs(base_dir, exist_ok=True)
 
-        # Get baseline date and create dated directory
         baseline_date = self.get_baseline_date()
         dated_dir = os.path.join(base_dir, baseline_date)
         os.makedirs(dated_dir, exist_ok=True)
