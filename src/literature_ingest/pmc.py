@@ -451,6 +451,7 @@ class PMCParser:
             id=DocumentId(id=pmc_id, type="pmc"),
             other_ids=other_ids,
             title=title,
+            raw_type=root.get("article-type", None),
             type=article_type,
             journal=journal,
             year=year,

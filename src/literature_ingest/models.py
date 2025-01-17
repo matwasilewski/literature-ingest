@@ -48,6 +48,7 @@ PMC_ARTICLE_TYPE_MAP = {
     "addendum": ArticleType.OTHER,
     "rapid-communication": ArticleType.OTHER,
     "product-review": ArticleType.REVIEW,
+    "expression-of-concern": ArticleType.OTHER,
 }
 
 
@@ -97,6 +98,7 @@ class Document(BaseModel):
 
     # Basic metadata
     title: str
+    raw_type: Optional[str] = None
     type: Optional[ArticleType] = None
 
     # Journal information
