@@ -164,29 +164,155 @@ class DocumentId(BaseModel):
     id: str
     type: str
 
-class Document(BaseModel):
-    id: DocumentId
+class Author(BaseModel):
+    """Represents an author with their name and affiliations"""
+    name: str
+    email: Optional[str] = None
+    affiliations: List[str] = []
+    is_corresponding: bool = False
+
+class JournalMetadata(BaseModel):
+    """Journal-specific metadata"""
     title: str
-    authors: List[str]
-    abstract: str
+    issn: Optional[str] = None
+    publisher: Optional[str] = None
+    abbreviation: Optional[str] = None  # journal-id with type "nlm-ta" or "iso-abbrev"
+
+class PublicationDates(BaseModel):
+    """Various publication dates associated with the article"""
+    received_date: Optional[str] = None
+    accepted_date: Optional[str] = None
+    epub_date: Optional[str] = None
+    collection_date: Optional[str] = None
+
+class Document(BaseModel):
+    """Represents a PMC document with enhanced metadata"""
+    # Core identifiers
+    id: DocumentId
+    other_ids: Dict[str, str] = {}  # Other IDs like pmid, doi, etc.
+
+    # Basic metadata
+    title: str
     type: str
-    journal: str
+
+    # Journal information
+    journal: JournalMetadata
+
+    # Dates
     year: int
+    publication_dates: PublicationDates = PublicationDates()
+
+    # Content
+    abstract: str
+    keywords: List[str] = []
+
+    # Contributors
+    authors: List[Author] = []
+
+    # Article categorization
+    subject_groups: List[str] = []  # e.g., "Original Article"
+
+    # License information
+    license_type: Optional[str] = None
+    copyright_statement: Optional[str] = None
+    copyright_year: Optional[str] = None
 
 class PMCParser:
     def __init__(self):
         pass
 
-    def _extract_authors(self, contrib_group) -> List[str]:
-        """Extract author names from contrib-group element"""
+    def _extract_authors(self, contrib_group) -> List[Author]:
+        """Extract author information from contrib-group element"""
         authors = []
+        # Get all affiliations first
+        affiliations = {}
+        for aff in contrib_group.findall(".//aff"):
+            aff_id = aff.get("id")
+            if aff_id:
+                affiliations[aff_id] = aff.text.strip() if aff.text else ""
+
         for contrib in contrib_group.findall(".//contrib[@contrib-type='author']"):
             name = contrib.find(".//name")
             if name is not None:
                 surname = name.find("surname").text if name.find("surname") is not None else ""
                 given_names = name.find("given-names").text if name.find("given-names") is not None else ""
-                authors.append(f"{surname}, {given_names}")
+                full_name = f"{surname}, {given_names}"
+
+                # Get email
+                email = contrib.find(".//email")
+                email_text = email.text if email is not None else None
+
+                # Get affiliations
+                author_affiliations = []
+                for xref in contrib.findall(".//xref[@ref-type='aff']"):
+                    aff_id = xref.get("rid")
+                    if aff_id in affiliations:
+                        author_affiliations.append(affiliations[aff_id])
+
+                # Check if corresponding author
+                is_corresponding = contrib.find(".//xref[@ref-type='corresp']") is not None
+
+                authors.append(Author(
+                    name=full_name,
+                    email=email_text,
+                    affiliations=author_affiliations,
+                    is_corresponding=is_corresponding
+                ))
         return authors
+
+    def _extract_dates(self, article_meta) -> PublicationDates:
+        """Extract publication dates from article-meta element"""
+        dates = {}
+        date_types = {
+            "received": "received_date",
+            "accepted": "accepted_date",
+            "epub": "epub_date",
+            "collection": "collection_date"
+        }
+
+        for history_date in article_meta.findall(".//history/date"):
+            date_type = history_date.get("date-type")
+            if date_type in date_types:
+                year = history_date.find("year")
+                month = history_date.find("month")
+                day = history_date.find("day")
+
+                if year is not None:
+                    date_str = f"{year.text}"
+                    if month is not None:
+                        date_str = f"{date_str}-{month.text}"
+                        if day is not None:
+                            date_str = f"{date_str}-{day.text}"
+                    dates[date_types[date_type]] = date_str
+
+        return PublicationDates(**dates)
+
+    def _extract_journal_metadata(self, journal_meta) -> JournalMetadata:
+        """Extract journal metadata from journal-meta element"""
+        # Get journal title
+        journal_title = journal_meta.find(".//journal-title")
+        title = journal_title.text if journal_title is not None else ""
+
+        # Get ISSN
+        issn = journal_meta.find(".//issn")
+        issn_text = issn.text if issn is not None else None
+
+        # Get publisher
+        publisher = journal_meta.find(".//publisher/publisher-name")
+        publisher_text = publisher.text if publisher is not None else None
+
+        # Get abbreviation
+        journal_id = journal_meta.find(".//journal-id[@journal-id-type='nlm-ta']")
+        if journal_id is None:
+            journal_id = journal_meta.find(".//journal-id[@journal-id-type='iso-abbrev']")
+        abbreviation = journal_id.text if journal_id is not None else None
+
+        return JournalMetadata(
+            title=title,
+            issn=issn_text,
+            publisher=publisher_text,
+            abbreviation=abbreviation
+        )
 
     def _extract_abstract(self, front) -> str:
         """Extract abstract text from front element"""
@@ -211,24 +337,32 @@ class PMCParser:
         # Get article type
         article_type = root.get("article-type", "")
 
-        # Get PMC ID
+        # Get article meta section
         article_meta = front.find(".//article-meta")
+
+        # Get all article IDs
+        other_ids = {}
         pmc_id = None
         for article_id in article_meta.findall(".//article-id"):
-            if article_id.get("pub-id-type") == "pmc":
+            id_type = article_id.get("pub-id-type")
+            if id_type == "pmc":
                 pmc_id = article_id.text
-                break
+            else:
+                other_ids[id_type] = article_id.text
 
         # Get title
         title = article_meta.find(".//article-title").text
 
-        # Get journal title
+        # Get journal metadata
         journal_meta = front.find(".//journal-meta")
-        journal = journal_meta.find(".//journal-title").text
+        journal = self._extract_journal_metadata(journal_meta)
 
         # Get publication year
         pub_date = article_meta.find(".//pub-date[@pub-type='collection']")
         year = int(pub_date.find("year").text)
+
+        # Get publication dates
+        publication_dates = self._extract_dates(article_meta)
 
         # Get authors
         contrib_group = article_meta.find(".//contrib-group")
@@ -237,12 +371,51 @@ class PMCParser:
         # Get abstract
         abstract = self._extract_abstract(front)
 
+        # Get keywords
+        keywords = []
+        kwd_group = article_meta.find(".//kwd-group")
+        if kwd_group is not None:
+            for kwd in kwd_group.findall(".//kwd"):
+                if kwd.text:
+                    keywords.append(kwd.text)
+
+        # Get subject groups
+        subject_groups = []
+        for subj in article_meta.findall(".//subj-group/subject"):
+            if subj.text:
+                subject_groups.append(subj.text)
+
+        # Get license information
+        license_elem = article_meta.find(".//license")
+        license_type = None
+        if license_elem is not None:
+            license_ref = license_elem.find(".//{http://www.niso.org/schemas/ali/1.0/}license_ref")
+            if license_ref is not None:
+                license_type = license_ref.text
+
+        # Get copyright information
+        copyright_statement = None
+        copyright_year = None
+        copyright_elem = article_meta.find(".//copyright-statement")
+        if copyright_elem is not None:
+            copyright_statement = copyright_elem.text
+        copyright_year_elem = article_meta.find(".//copyright-year")
+        if copyright_year_elem is not None:
+            copyright_year = copyright_year_elem.text
+
         return Document(
             id=DocumentId(id=pmc_id, type="pmc"),
+            other_ids=other_ids,
             title=title,
-            authors=authors,
-            abstract=abstract,
             type=article_type,
             journal=journal,
-            year=year
+            year=year,
+            publication_dates=publication_dates,
+            abstract=abstract,
+            keywords=keywords,
+            authors=authors,
+            subject_groups=subject_groups,
+            license_type=license_type,
+            copyright_statement=copyright_statement,
+            copyright_year=copyright_year
         )
