@@ -26,7 +26,9 @@ def get_file(file: str, target: Path):
     if target.is_dir():
         target = target / file
     client = PMCFTPClient()
+    client.connect()
     client.download_file(file, target)
+    client.close()
     click.echo(f"Downloaded {file} to {target}")
 
 @cli.command()
