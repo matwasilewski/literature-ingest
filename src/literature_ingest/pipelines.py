@@ -18,16 +18,17 @@ from literature_ingest.pmc import PMCParser
 #                 clinical_trials.append(doc)
 #     return clinical_trials
 
-def parse_pmc_docs_sample():
+def parse_pmc_docs_sample(start_from_parsed: bool = False):
     source_dir = Path("data/pipelines/raw/")
     unzipped_dir = Path("data/pipelines/unzipped/")
     parsed_dir = Path("data/pipelines/parsed/")
 
     parser = PMCParser()
 
-    print(f"Unzipping {source_dir}...")
-    for file in source_dir.glob("*.tar.gz"):
-        print(f"Unzipping {file}...")
+    if not start_from_parsed:
+        print(f"Unzipping {source_dir}...")
+        for file in source_dir.glob("*.tar.gz"):
+            print(f"Unzipping {file}...")
         unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=False)
     print(f"Unzipped {unzipped_dir}...")
 
