@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Union
 import click
 from cloudpathlib import CloudPath
 from literature_ingest.pmc import PMCFTPClient
@@ -6,10 +7,35 @@ from literature_ingest.utils.logging import get_logger
 
 logger = get_logger(__name__, "info")
 
+def convert_to_cloudpath(path: Path) -> Union[CloudPath, Path]:
+    if str(path).startswith(("s3://", "gs://", "az://")):
+        return CloudPath(str(path))
+    return path
+
 @click.group()
 def cli():
     """Literature ingest CLI tool for downloading and processing PMC articles."""
     pass
+
+@click.command()
+@click.option(
+    "--file",
+    type=str,
+    help="File to download",
+)
+@click.option(
+    "--target",
+    type=Path,
+    help="Target directory or path to download file to",
+)
+def get_file(file: str, target: Path):
+    """Download a file from PMC FTP server."""
+    target = convert_to_cloudpath(target)
+    if target.is_dir():
+        target = target / file
+    client = PMCFTPClient()
+    client.download_file(file, target)
+    click.echo(f"Downloaded {file} to {target}")
 
 @cli.command()
 @click.option(
@@ -25,9 +51,7 @@ def cli():
 )
 def download_baselines(dry_run: bool, base_dir: Path):
     """Download baseline files from PMC FTP server."""
-    # Convert to CloudPath if it's a cloud storage path
-    if str(base_dir).startswith(("s3://", "gs://", "az://")):
-        base_dir = CloudPath(str(base_dir))
+    base_dir = convert_to_cloudpath(base_dir)
 
     client = PMCFTPClient()
     try:
