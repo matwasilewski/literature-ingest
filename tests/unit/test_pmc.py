@@ -346,3 +346,17 @@ def test_document_load_from_json():
     assert loaded_doc.publication_dates.received_date == original_doc.publication_dates.received_date
     assert loaded_doc.publication_dates.accepted_date == original_doc.publication_dates.accepted_date
     assert loaded_doc.publication_dates.epub_date == original_doc.publication_dates.epub_date
+
+
+
+def test_parse_doc_with_error(pmc_doc_2):
+    parser = PMCParser()
+    doc = parser.parse_doc(pmc_doc_2)
+    assert doc
+
+
+
+def test_parse_doc_with_error_2(pmc_doc_3):
+    parser = PMCParser()
+    doc = parser.parse_doc(pmc_doc_3)
+    assert doc
