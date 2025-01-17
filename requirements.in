@@ -1,6 +1,6 @@
 pytest
 click
-cloudpath
+cloudpathlib
 ujson
 json_log_formatter
 tomlkit

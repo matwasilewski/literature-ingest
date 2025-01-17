@@ -4,6 +4,8 @@ import ftplib
 import os
 from typing import Dict, List, Optional, Tuple
 import re
+from cloudpathlib import CloudPath
+
 
 from click import Path
 
