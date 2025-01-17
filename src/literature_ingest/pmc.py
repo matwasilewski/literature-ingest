@@ -229,7 +229,12 @@ class PMCParser:
         for aff in contrib_group.findall(".//aff"):
             aff_id = aff.get("id")
             if aff_id:
-                affiliations[aff_id] = aff.text.strip() if aff.text else ""
+                # Get full text content of affiliation including nested elements
+                aff_text = ''.join(aff.itertext()).strip()
+                # Remove the label if it exists
+                if aff_text.startswith(aff.find('label').text):
+                    aff_text = aff_text[len(aff.find('label').text):].strip()
+                affiliations[aff_id] = aff_text
 
         for contrib in contrib_group.findall(".//contrib[@contrib-type='author']"):
             name = contrib.find(".//name")
