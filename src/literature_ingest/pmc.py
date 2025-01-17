@@ -157,14 +157,3 @@ class PMCFTPClient:
 
         downloaded_files = self.download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
         return downloaded_files
-
-def main():
-    client = PMCFTPClient()
-    try:
-        client.connect()
-        client.download_baselines()
-    finally:
-        client.close()
-
-if __name__ == "__main__":
-    main()
