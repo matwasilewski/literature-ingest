@@ -6,17 +6,8 @@ from typing import List
 from cloudpathlib import CloudPath
 from functools import wraps
 import time
+import subprocess
 
-def timeit(func):
-    @wraps(func)
-    def timeit_wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        total_time = end_time - start_time
-        print(f'Function {func.__name__} Took {total_time:.4f} seconds')
-        return result
-    return timeit_wrapper
 
 def resolve_file_or_dir(target: Path, source: Path) -> Path:
     if target.is_dir():
@@ -24,18 +15,20 @@ def resolve_file_or_dir(target: Path, source: Path) -> Path:
     else:
         return target
 
-def unzip_and_filter(archive_file: Path, target_dir: Path, extension = ".xml") -> List[Path]:
+def unzip_and_filter(archive_file: Path, target_dir: Path, extension = ".xml", use_gsutil=False, overwrite=False) -> List[Path]:
 
     if isinstance(target_dir, CloudPath):
         # unzip locally and upload to target_dir
         with tempfile.TemporaryDirectory() as local_dir:
             local_files = unzip_to_local(archive_file, Path(local_dir), extension)
-            files = upload_to_cloud(target_dir, local_files)
+            if use_gsutil:
+                files = upload_to_cloud_with_gsutil(target_dir, Path(local_dir), overwrite=overwrite)
+            else:
+                files = upload_to_cloud(target_dir, local_files, overwrite=overwrite)
     else:
         files = unzip_to_local(archive_file, target_dir, extension)
     return files
 
-@timeit
 def upload_to_cloud(target_dir, local_files, overwrite=False):
     files = []
     for file in local_files:
@@ -47,7 +40,22 @@ def upload_to_cloud(target_dir, local_files, overwrite=False):
     return files
 
 
-@timeit
+def upload_to_cloud_with_gsutil(target_dir, local_dir, overwrite=True):
+    if not overwrite:
+        raise ValueError("overwrite must be True - this command will always overwrite files in the target directory")
+
+    # Construct gsutil command for parallel upload of all files in local_dir
+    cmd = ["gsutil", "-m", "cp", f"{local_dir}/*", str(target_dir)]
+    print(f"Executing command: {cmd}")
+
+    # Execute the gsutil command
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"gsutil upload failed: {result.stderr}")
+
+    # Return list of files in source directory
+    return list(local_dir.glob("*"))
+
 def unzip_to_local(archive_file: Path, target_dir: Path, extension = ".xml") -> List[Path]:
     files = []
     with tarfile.open(archive_file, "r:gz") as tar:
