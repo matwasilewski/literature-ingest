@@ -14,7 +14,12 @@ def unzip_and_filter(archive_file: Path, target_dir: Path, extension = ".xml") -
     with tarfile.open(archive_file, "r:gz") as tar:
         for member in tar.getmembers():
             if member.isfile() and member.name.endswith(extension):
-                file_path = target_dir / member.name
-                tar.extract(member, file_path)
+                # Get just the filename without the path
+                filename = Path(member.name).name
+                # Create new destination path in target directory
+                file_path = target_dir / filename
+                # Extract member to the target directory, renaming it
+                member.name = filename
+                tar.extract(member, target_dir)
                 files.append(file_path)
     return files
