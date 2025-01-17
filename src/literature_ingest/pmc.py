@@ -172,6 +172,9 @@ class PMCParser:
         authors = []
         # Get all affiliations first
         affiliations = {}
+        if contrib_group is None:
+            return authors
+
         for aff in contrib_group.findall(".//aff"):
             aff_id = aff.get("id")
             if aff_id:
