@@ -14,6 +14,7 @@ class ArticleType(str, Enum):
     NEWS = "News"
     CLINICAL_TRIAL = "Clinical Trial"
     OTHER = "Other"
+    CORRECTION = "Correction"
 
 
 PMC_ARTICLE_TYPE_MAP = {
@@ -24,6 +25,18 @@ PMC_ARTICLE_TYPE_MAP = {
     "letter": ArticleType.LETTER,
     "article-commentary": ArticleType.COMMENT,
     "news": ArticleType.NEWS,
+    "other": ArticleType.OTHER,
+    "brief-report": ArticleType.CASE_REPORT,
+    "reply": ArticleType.LETTER,
+    "correction": ArticleType.CORRECTION,
+    "protocol": ArticleType.OTHER,
+    "discussion": ArticleType.OTHER,
+    "in-brief": ArticleType.OTHER,
+    "abstract": ArticleType.RESEARCH_ARTICLE,
+    "book-review": ArticleType.REVIEW,
+    "oration": ArticleType.OTHER,
+    "obituary": ArticleType.OTHER,
+    "meeting-report": ArticleType.OTHER,
 }
 
 
