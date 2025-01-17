@@ -1,4 +1,4 @@
-from literature_ingest.models import ArticleType
+from literature_ingest.models import ArticleType, Section
 import pytest
 from unittest.mock import Mock
 from literature_ingest.pmc import (
@@ -208,7 +208,7 @@ def test_document_to_json(pmc_doc):
     assert json_data["id"]["id"] == "PMC10335194"
     assert json_data["id"]["type"] == "pmc"
     assert json_data["title"] == doc.title
-    assert json_data["type"] == "research-article"
+    assert json_data["type"] == "Research Article"
 
     # Check nested structures
     assert len(json_data["authors"]) == 9
