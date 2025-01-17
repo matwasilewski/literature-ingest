@@ -1,5 +1,5 @@
 import pytest
-from literature_ingest.pmc import PMCFTPClient
+from src.literature_ingest.pmc import PMCFTPClient
 
 
 def test_pmc_connection():
