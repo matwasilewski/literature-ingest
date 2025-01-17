@@ -7,13 +7,13 @@ def test_get_baseline_date_success():
     client = PMCFTPClient()
 
     # Act
-    result_dates, result_files = client.extract_baseline_files([
+    result_date, result_files = client.extract_baseline_files([
         "oa_noncomm_xml.PMC000xxxxxx.baseline.2024-12-18.filelist.csv",
         "some_other_file.txt"
     ])
 
     # Assert
-    assert result_dates == ["2024-12-18"]
+    assert result_date == "2024-12-18"
     assert result_files == ["oa_noncomm_xml.PMC000xxxxxx.baseline.2024-12-18.filelist.csv"]
 
 @pytest.mark.parametrize("file_list", [
