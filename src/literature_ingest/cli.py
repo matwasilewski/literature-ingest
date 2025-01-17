@@ -55,7 +55,12 @@ def get_file(file: str, target: Path, source: str) -> None :
     help="Directory to store downloaded baseline files",
     type=Path,
 )
-def download_pmc_baselines(dry_run: bool, base_dir: Path):
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    help="Overwrite existing files",
+)
+def download_pmc_baselines(dry_run: bool, base_dir: Path, overwrite: bool):
     """Download baseline files from the PMC FTP server."""
     base_dir = convert_to_cloudpath(base_dir)
 
@@ -65,7 +70,7 @@ def download_pmc_baselines(dry_run: bool, base_dir: Path):
         client.connect()
 
         logger.info(f"Downloading baselines to {base_dir}")
-        client.download_baselines(base_dir=base_dir, dry_run=dry_run)
+        client.download_baselines(base_dir=base_dir, dry_run=dry_run, overwrite=overwrite)
 
     except Exception as e:
         logger.error(f"Error downloading baselines: {str(e)}")
@@ -85,7 +90,12 @@ def download_pmc_baselines(dry_run: bool, base_dir: Path):
     help="Directory to store downloaded incremental files",
     type=Path,
 )
-def download_pmc_incremental(dry_run: bool, base_dir: Path):
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    help="Overwrite existing files",
+)
+def download_pmc_incremental(dry_run: bool, base_dir: Path, overwrite: bool):
     """Download incremental files from the PMC FTP server."""
     base_dir = convert_to_cloudpath(base_dir)
 
@@ -95,7 +105,7 @@ def download_pmc_incremental(dry_run: bool, base_dir: Path):
         client.connect()
 
         logger.info(f"Downloading incremental to {base_dir}")
-        client.download_incremental(base_dir=base_dir, dry_run=dry_run)
+        client.download_incremental(base_dir=base_dir, dry_run=dry_run, overwrite=overwrite)
 
     except Exception as e:
         logger.error(f"Error downloading incremental: {str(e)}")
