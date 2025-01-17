@@ -271,3 +271,78 @@ def test_document_to_json_minimal():
     assert json_data["keywords"] == []
     assert json_data["authors"] == []
     assert json_data["abstract"] is None
+
+def test_document_load_from_json():
+    """Test Document.from_json() method"""
+    # Create a minimal document
+    original_doc = Document(
+        id=DocumentId(id="TEST123", type="test"),
+        title="Test Title",
+        abstract="Test abstract",
+        sections=[
+            Section(
+                title="Section 1",
+                text="Main text",
+                subsections=[
+                    Section(
+                        title="Subsection 1.1",
+                        text="Subsection text"
+                    )
+                ]
+            )
+        ],
+        authors=[
+            Author(
+                name="Smith, John",
+                email="john@example.com",
+                affiliations=["University A", "Institute B"],
+                is_corresponding=True
+            )
+        ],
+        journal=JournalMetadata(
+            title="Test Journal",
+            issn="1234-5678",
+            publisher="Test Publisher",
+            abbreviation="Test J"
+        ),
+        publication_dates=PublicationDates(
+            received_date="2023-01-01",
+            accepted_date="2023-02-01",
+            epub_date="2023-03-01"
+        )
+    )
+
+    # Convert to JSON
+    json_str = original_doc.to_json()
+
+    # Load back from JSON
+    loaded_doc = Document.from_json(json_str)
+
+    # Verify core fields
+    assert loaded_doc.id == original_doc.id
+    assert loaded_doc.title == original_doc.title
+    assert loaded_doc.abstract == original_doc.abstract
+
+    # Verify nested structures
+    assert len(loaded_doc.sections) == len(original_doc.sections)
+    assert loaded_doc.sections[0].title == original_doc.sections[0].title
+    assert loaded_doc.sections[0].text == original_doc.sections[0].text
+    assert len(loaded_doc.sections[0].subsections) == len(original_doc.sections[0].subsections)
+
+    # Verify authors
+    assert len(loaded_doc.authors) == len(original_doc.authors)
+    assert loaded_doc.authors[0].name == original_doc.authors[0].name
+    assert loaded_doc.authors[0].email == original_doc.authors[0].email
+    assert loaded_doc.authors[0].affiliations == original_doc.authors[0].affiliations
+    assert loaded_doc.authors[0].is_corresponding == original_doc.authors[0].is_corresponding
+
+    # Verify journal metadata
+    assert loaded_doc.journal.title == original_doc.journal.title
+    assert loaded_doc.journal.issn == original_doc.journal.issn
+    assert loaded_doc.journal.publisher == original_doc.journal.publisher
+    assert loaded_doc.journal.abbreviation == original_doc.journal.abbreviation
+
+    # Verify dates
+    assert loaded_doc.publication_dates.received_date == original_doc.publication_dates.received_date
+    assert loaded_doc.publication_dates.accepted_date == original_doc.publication_dates.accepted_date
+    assert loaded_doc.publication_dates.epub_date == original_doc.publication_dates.epub_date
