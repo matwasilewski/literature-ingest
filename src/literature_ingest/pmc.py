@@ -106,7 +106,7 @@ class PMCFTPClient:
                 print(f"Skipping {remote_file}")
         return target_file_paths
 
-    def download_incremental(self, base_dir: Path = Path('data/incremental'), dry_run: bool = False) -> List[Path]:
+    def download_incremental(self, base_dir: Path = Path('data/incremental'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
         """Download all incremental files that don't exist locally."""
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
@@ -125,11 +125,11 @@ class PMCFTPClient:
         dated_dir.mkdir(parents=True, exist_ok=True)
 
         incremental_files = self.extract_incremental_files(raw_file_names)
-        downloaded_files = self.download_files(incremental_files, dated_dir, dry_run=dry_run, overwrite=False)
+        downloaded_files = self.download_files(incremental_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
 
         return downloaded_files
 
-    def download_baselines(self, base_dir: Path = Path('data/baselines'), dry_run: bool = False) -> List[Path]:
+    def download_baselines(self, base_dir: Path = Path('data/baselines'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
         """Download all baseline files that don't exist locally.
 
         Baseline files is a batch of PMC documents that should contain all PMC documents released up to a certain date.
@@ -155,7 +155,7 @@ class PMCFTPClient:
         dated_dir = base_dir / baseline_date
         dated_dir.mkdir(parents=True, exist_ok=True)
 
-        downloaded_files = self.download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=False)
+        downloaded_files = self.download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
         return downloaded_files
 
 def main():
