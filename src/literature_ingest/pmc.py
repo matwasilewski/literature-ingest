@@ -39,18 +39,15 @@ class PMCFTPClient:
         files = [f.split()[-1] for f in files]
         return files
 
-    def download_file(self, remote_file: str, local_path: Optional[str] = None) -> None:
-        """Download a file from the FTP server"""
+    def download_file(self, remote_file: str, target_path: Path) -> None:
+        """Download a file from REMOTE_FILE to TARGET_PATH, from PMC FTP server defined in __init__"""
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
 
-        if local_path is None:
-            local_path = os.path.basename(remote_file)
-
         try:
-            with open(local_path, 'wb') as f:
+            with target_path.open(mode='wb') as f:
                 self.ftp.retrbinary(f'RETR {remote_file}', f.write)
-            print(f"Successfully downloaded {remote_file} to {local_path}")
+            print(f"Successfully downloaded {remote_file} to {target_path}")
         except Exception as e:
             print(f"Failed to download {remote_file}: {str(e)}")
             raise
@@ -95,17 +92,23 @@ class PMCFTPClient:
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
 
-        os.makedirs(base_dir, exist_ok=True)
+        # Create base directory if it doesn't exist
+        base_dir.mkdir(parents=True, exist_ok=True)
 
+        # Get list of remote files
         raw_file_names = self.list_directory()
+
+        # Extract baseline date and files
         baseline_date, baseline_files = self.extract_baseline_files(raw_file_names)
-        dated_dir = os.path.join(base_dir, baseline_date)
-        os.makedirs(dated_dir, exist_ok=True)
+
+        # Create dated directory
+        dated_dir = base_dir / baseline_date
+        dated_dir.mkdir(parents=True, exist_ok=True)
 
         # Download missing files
         for remote_file in baseline_files:
-            target_file_path = os.path.join(dated_dir, remote_file)
-            if not os.path.exists(target_file_path):
+            target_file_path = dated_dir / remote_file
+            if not target_file_path.exists():
                 if not dry_run:
                     print(f"Downloading {remote_file}...")
                     self.download_file(remote_file, target_file_path)
