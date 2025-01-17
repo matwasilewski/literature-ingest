@@ -47,6 +47,7 @@ PMC_ARTICLE_TYPE_MAP = {
     "product-review": ArticleType.REVIEW,
     "addendum": ArticleType.OTHER,
     "rapid-communication": ArticleType.OTHER,
+    "product-review": ArticleType.REVIEW,
 }
 
 
