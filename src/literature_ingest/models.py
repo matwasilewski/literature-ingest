@@ -97,3 +97,29 @@ class Document(BaseModel):
     license_type: Optional[str] = None
     copyright_statement: Optional[str] = None
     copyright_year: Optional[str] = None
+
+    def to_json(self, indent: int = 2) -> str:
+        """Convert document to JSON string"""
+        return self.model_dump_json(indent=indent)
+
+    def to_raw_text(self) -> str:
+        """Convert document to raw text format.
+        Format: title, newline, abstract, newline, sections text
+        """
+        components = [self.title]
+
+        if self.abstract:
+            components.append(self.abstract)
+
+        def process_section(section: Section) -> str:
+            section_text = [section.text]
+            for subsection in section.subsections:
+                section_text.append(process_section(subsection))
+            return " ".join(section_text)
+
+        for section in self.sections:
+            section_text = process_section(section)
+            if section_text.strip():
+                components.append(section_text)
+
+        return "\n\n".join(components)
