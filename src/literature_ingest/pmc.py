@@ -268,16 +268,16 @@ class PMCParser:
     def _extract_dates(self, article_meta) -> PublicationDates:
         """Extract publication dates from article-meta element"""
         dates = {}
-        date_types = {
+
+        # Handle dates in history element
+        history_date_types = {
             "received": "received_date",
             "accepted": "accepted_date",
-            "epub": "epub_date",
-            "collection": "collection_date"
         }
 
         for history_date in article_meta.findall(".//history/date"):
             date_type = history_date.get("date-type")
-            if date_type in date_types:
+            if date_type in history_date_types:
                 year = history_date.find("year")
                 month = history_date.find("month")
                 day = history_date.find("day")
@@ -288,7 +288,28 @@ class PMCParser:
                         date_str = f"{date_str}-{month.text}"
                         if day is not None:
                             date_str = f"{date_str}-{day.text}"
-                    dates[date_types[date_type]] = date_str
+                    dates[history_date_types[date_type]] = date_str
+
+        # Handle pub-dates
+        pub_date_types = {
+            "epub": "epub_date",
+            "collection": "collection_date"
+        }
+
+        for pub_date in article_meta.findall(".//pub-date"):
+            pub_type = pub_date.get("pub-type")
+            if pub_type in pub_date_types:
+                year = pub_date.find("year")
+                month = pub_date.find("month")
+                day = pub_date.find("day")
+
+                if year is not None:
+                    date_str = f"{year.text}"
+                    if month is not None:
+                        date_str = f"{date_str}-{month.text}"
+                        if day is not None:
+                            date_str = f"{date_str}-{day.text}"
+                    dates[pub_date_types[pub_type]] = date_str
 
         return PublicationDates(**dates)
 
