@@ -6,12 +6,10 @@ def test_pmc_connection():
     """Test that we can successfully connect to the PMC FTP server"""
     client = PMCFTPClient()
     try:
-        # Test connection
         client.connect()
         assert client.ftp is not None
         assert client.ftp.pwd() == PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR
 
-        # Test basic directory listing
         files = client.list_directory()
         assert len(files) > 0  # Should have at least some files/directories
 
