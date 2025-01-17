@@ -157,3 +157,12 @@ class PMCFTPClient:
 
         downloaded_files = self.download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
         return downloaded_files
+
+
+
+class PMCParser:
+    def __init__(self):
+        pass
+
+    def parse_baseline(self, file: Path) -> List[str]:
+        pass
