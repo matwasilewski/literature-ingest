@@ -102,7 +102,7 @@ async def pipeline_ingest_pmc_sample(
 
 
 
-def pipeline_ingest_pmc(
+async def pipeline_ingest_pmc(
         raw_dir: Path = Path("data/pipelines/pmc/raw/"),
         unzipped_dir: Path = Path("data/pipelines/pmc/unzipped/"),
         parsed_dir: Path = Path("data/pipelines/pmc/parsed/"),
@@ -133,6 +133,6 @@ def pipeline_ingest_pmc(
 
     # parse data
     print("Parsing PMC data..." )
-    parsed_files = pipeline_parse_pmc(unzipped_dir, parsed_dir)
+    parsed_files = await pipeline_parse_pmc(unzipped_dir, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PMC data")

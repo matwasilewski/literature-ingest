@@ -214,7 +214,7 @@ def pipelines():
 def ingest_pmc():
     """Ingest PMC data."""
     click.echo("Ingesting PMC data...")
-    pipeline_ingest_pmc()
+    asyncio.run(pipeline_ingest_pmc())
     click.echo("DONE: Ingest PMC data")
 
 
@@ -226,15 +226,15 @@ def ingest_pmc():
     type=str,
     multiple=True,
 )
-async def ingest_pmc_sample(file_names: List[str]):
+def ingest_pmc_sample(file_names: List[str]):
     """Ingest PMC sample data."""
     click.echo("Ingesting PMC sample data...")
-    await pipeline_ingest_pmc_sample(
+    asyncio.run(pipeline_ingest_pmc_sample(
         raw_dir=Path("data/pipelines/sample_pmc/raw/"),
         unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/"),
         parsed_dir=Path("data/pipelines/sample_pmc/parsed/"),
         file_names=file_names
-    )
+    ))
     click.echo("DONE: Ingest PMC sample data")
 
 
@@ -263,7 +263,7 @@ def parse_missing_files_in_pmc(file_list: Optional[str]):
         file_list = Path(file_list).open().read().splitlines()
 
     click.echo(f"Parsing {len(file_list)} missing files in PMC...")
-    parsed_files, failed_files = pipeline_parse_missing_files_in_pmc(file_list)
+    parsed_files, failed_files = asyncio.run(pipeline_parse_missing_files_in_pmc(file_list))
     click.echo(f"DONE: Parsed {len(parsed_files)} files, failed {len(failed_files)} files")
 
     if len(failed_files) > 0:
