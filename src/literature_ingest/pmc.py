@@ -425,7 +425,7 @@ class PMCParser:
 
         return ids_list
 
-    def parse_doc(self, file_contents: str) -> Document:
+    def parse_doc(self, file_name: Path, file_contents: str) -> Document:
         """Parse PMC XML document and extract relevant information"""
 
         # Normalize the document
@@ -439,7 +439,7 @@ class PMCParser:
         self.unique_article_types[root.get("article-type", None)] += 1
         # Get article type
         if root.get("article-type", None) is None or root.get("article-type", None) not in PMC_ARTICLE_TYPE_MAP:
-            log.warn(f"Article type not found in {root.get('article-type', None)}")
+            log.warn(f"File: {file_name.name} - Article type not found in {root.get('article-type', None)}")
             article_type = None
         else:
             article_type = PMC_ARTICLE_TYPE_MAP.get(root.get("article-type"), ArticleType.OTHER)
@@ -558,7 +558,7 @@ class PMCParser:
 
             try:
                 with file.open(mode='r') as f:
-                    doc = self.parse_doc(f.read())
+                    doc = self.parse_doc(file, f.read())
 
                 with open(output_dir / file_name, 'w') as f:
                     f.write(doc.model_dump_json(indent=2))
