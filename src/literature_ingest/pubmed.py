@@ -126,17 +126,22 @@ class PubMedParser:
         """Extract keywords from MeSH headings"""
         keywords = set()
 
-        # Extract from ChemicalList - need to go up to MedlineCitation
-        chemical_list = article_elem.find("../../ChemicalList")
+        # Find MedlineCitation first
+        medline_citation = article_elem.find("../..")
+        if medline_citation is None:
+            return list(keywords)
+
+        # Extract from ChemicalList
+        chemical_list = medline_citation.find("ChemicalList")
         if chemical_list is not None:
-            for chemical in chemical_list.findall("Chemical/NameOfSubstance"):
+            for chemical in chemical_list.findall(".//NameOfSubstance"):
                 if chemical.text:
                     keywords.add(chemical.text)
 
-        # Extract from MeshHeadingList - need to go up to MedlineCitation
-        mesh_list = article_elem.find("../../MeshHeadingList")
+        # Extract from MeshHeadingList
+        mesh_list = medline_citation.find("MeshHeadingList")
         if mesh_list is not None:
-            for mesh in mesh_list.findall("MeshHeading/DescriptorName"):
+            for mesh in mesh_list.findall(".//DescriptorName"):
                 if mesh.text:
                     keywords.add(mesh.text)
 
