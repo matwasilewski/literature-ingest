@@ -220,7 +220,12 @@ def parse_docs(input_dir: str, output_dir: str, format: str, pattern: str):
         logger.error(f"Error processing documents: {str(e)}")
         raise click.ClickException(str(e))
 
-@cli.command()
+@cli.group()
+def pipelines():
+    """Commands for running various data processing pipelines."""
+    pass
+
+@pipelines.command()
 @click.option(
     "--start_from_parse",
     is_flag=True,
