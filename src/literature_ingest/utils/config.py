@@ -60,6 +60,8 @@ class Settings(BaseSettings):
         Path("logs") / f"{current_timestamp}-{LOGGER_NAME}-{LOG_LEVEL}.log"
     )
 
+    TEST_BUCKET: Optional[str] = None
+    PROD_BUCKET: Optional[str] = None
     SYSLOG_ADDR: Optional[Path] = None
 
     class Config:
