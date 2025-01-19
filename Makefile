@@ -1,9 +1,9 @@
-.PHONY: help check-bootstrap-dependencies check-tools check-docker bootstrap precommit install format type-check unit gcp-authenticate init-db install lint test load-data
+.PHONY: prerequisites venv install precommit precommit-hooks full_test format lock clean gcp-authenticate lint unit integration
 
 GIT_SHA ?= $(shell git rev-parse --short HEAD)
 UV_PYTHON = .venv/bin/python
 TARGET_PLATFORM ?= linux/amd64
-PREREQUISITES := docker gcloud python3 uv
+PREREQUISITES := gcloud python3 uv gsutil
 
 # ensures all make targets run in one shell (rather than line by line in new shell)
 .ONESHELL:
@@ -49,7 +49,7 @@ clean:
 	uv run pre-commit clean
 	rm -rf .pytest_cache .venv
 	uv cache clean
-	docker volume prune -f
+	# docker volume prune -f
 
 ## gcp-authenticate: Authenticate with GCP, use this before running composer commands
 gcp-authenticate:
