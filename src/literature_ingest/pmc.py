@@ -106,9 +106,9 @@ class PMCFTPClient:
                 if not dry_run:
                     print(f"Downloading {remote_file}...")
                     self.download_file(remote_file, target_file_path)
-                    target_file_paths.append(target_file_path)
                 else:
                     print(f"Would download {remote_file} to {target_file_path}")
+                target_file_paths.append(target_file_path)
             else:
                 print(f"Skipping {remote_file}")
         return target_file_paths
