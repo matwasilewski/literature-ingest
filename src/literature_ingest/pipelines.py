@@ -95,7 +95,7 @@ async def pipeline_ingest_pmc_sample(
     print(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} files...")
 
     print("Parsing PMC data..." )
-    parsed_files = await pipeline_parse_pmc(unzipped_dir, parsed_dir)
+    parsed_files = await pipeline_parse_pmc(unzipped_files_list, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PMC data")
 

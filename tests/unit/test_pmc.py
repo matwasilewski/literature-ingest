@@ -34,7 +34,7 @@ def test_get_baseline_date_failure(file_list):
     with pytest.raises(ValueError, match="Found a file with `baseline` string but no date"):
         client.extract_baseline_files(file_list)
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_parse_doc_basic_fields(pmc_doc):
     """Test basic document field parsing"""
     parser = PMCParser()
