@@ -286,6 +286,16 @@ class PMCParser:
 
         return PublicationDates(**dates)
 
+    def _extract_publication_year(self, publication_dates: PublicationDates) -> int:
+        """Extract publication year from publication dates"""
+        earliest_year = None
+        for date_type, date_value in publication_dates.items():
+            if date_value is not None:
+                year = int(date_value.split("-")[0])
+                if earliest_year is None or year < earliest_year:
+                    earliest_year = year
+        return earliest_year
+
     def _extract_journal_metadata(self, journal_meta) -> JournalMetadata:
         """Extract journal metadata from journal-meta element"""
         # Get journal title
@@ -434,7 +444,7 @@ class PMCParser:
 
         # Get publication dates
         publication_dates = self._extract_dates(article_meta)
-        year = publication_dates.collection_date.split("-")[0] if publication_dates.collection_date is not None else None
+        publication_year = self._extract_publication_year(publication_dates)
 
         # Get authors
         contrib_group = article_meta.find(".//contrib-group")
@@ -488,7 +498,7 @@ class PMCParser:
             raw_type=root.get("article-type", None),
             type=article_type,
             journal=journal,
-            year=year,
+            year=publication_year,
             publication_dates=publication_dates,
             abstract=abstract,
             keywords=keywords,

@@ -80,6 +80,13 @@ class PublicationDates(BaseModel):
     epub_date: Optional[str] = None
     collection_date: Optional[str] = None
 
+    def items(self):
+        """Returns an iterator of (date_type, date_value) tuples for non-None dates"""
+        return [
+            (name, value)
+            for name, value in self.__dict__.items()
+            if value is not None
+        ]
 
 class Section(BaseModel):
     """Represents a section in the document"""
