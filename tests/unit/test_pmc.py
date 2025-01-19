@@ -225,6 +225,27 @@ def test_document_to_json(pmc_doc):
     assert json_data["publication_dates"]["received_date"] == "2021-3-23"
     assert json_data["year"] == 2022
 
+def test_doc_2(pmc_doc_2):
+    parser = PMCParser()
+    doc = parser.parse_doc(pmc_doc_2)
+    assert doc
+
+    assert doc.title == "Co-regulation of intragenic microRNA miR-153 and its host gene Ia-2β: identification of miR-153 target genes with functions related to IA-2β in pancreas and brain"
+    assert doc.abstract.startswith("We analysed the genomic organisation of miR-153, a microRNA embedded in genes that encode two of the major type 1 diabetes autoantigen")
+    assert doc.keywords == ["Diabetes", "Glucose stimulation", "IA-2β", "MicroRNA", "miR-153", "Neurodegeneration"]
+    assert doc.raw_type == "research-article"
+    assert doc.type == "Research Article"
+    assert doc.journal.title == "Diabetologia"
+    assert doc.journal.issn == "0012-186X"
+    assert doc.journal.publisher == "Springer-Verlag"
+    assert doc.journal.abbreviation == "Diabetologia"
+    assert doc.year == 2013
+    assert doc.publication_dates.received_date == "2013-1-23"
+    assert doc.publication_dates.accepted_date == "2013-2-26"
+    assert doc.publication_dates.epub_date == "2013-4-18"
+    assert doc.sections[0].title == "Introduction"
+    assert doc.sections[0].text.startswith("Islet-associated protein (IA) 2 and IA-2β are major autoantigens in type 1 diabetes [1].")
+
 def test_document_to_raw_text_minimal():
     """Test Document.to_raw_text() with minimal document"""
     doc = Document(
@@ -359,4 +380,8 @@ def test_document_load_from_json():
 def test_parse_doc_with_error(request, pmc_doc_fixture):
     parser = PMCParser()
     doc = parser.parse_doc(request.getfixturevalue(pmc_doc_fixture))
+    # Create output filename based on fixture name
+    output_filename = f"{pmc_doc_fixture}.json"
+    with open(f"tests/resources/{output_filename}", "w") as f:
+        f.write(doc.to_json())
     assert doc
