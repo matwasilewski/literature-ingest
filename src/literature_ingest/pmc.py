@@ -110,7 +110,7 @@ class PMCFTPClient:
                 print(f"Skipping {remote_file}")
         return target_file_paths
 
-    def download_incremental(self, base_dir: Path = Path('data/incremental'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+    def _download_pmc_incremental(self, base_dir: Path = Path('data/incremental'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
         """Download all incremental files that don't exist locally."""
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
@@ -133,7 +133,7 @@ class PMCFTPClient:
 
         return downloaded_files
 
-    def download_baselines(self, base_dir: Path = Path('data/baselines'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+    def _download_pmc_baselines(self, base_dir: Path = Path('data/baselines'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
         """Download all baseline files that don't exist locally.
 
         Baseline files is a batch of PMC documents that should contain all PMC documents released up to a certain date.

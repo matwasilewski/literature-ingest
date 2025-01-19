@@ -108,7 +108,7 @@ def download_pmc_baselines(dry_run: bool, base_dir: Path, overwrite: bool):
         client.connect()
 
         logger.info(f"Downloading baselines to {base_dir}")
-        client.download_baselines(base_dir=base_dir, dry_run=dry_run, overwrite=overwrite)
+        client._download_pmc_baselines(base_dir=base_dir, dry_run=dry_run, overwrite=overwrite)
 
     except Exception as e:
         logger.error(f"Error downloading baselines: {str(e)}")
@@ -143,7 +143,7 @@ def download_pmc_incremental(dry_run: bool, base_dir: Path, overwrite: bool):
         client.connect()
 
         logger.info(f"Downloading incremental to {base_dir}")
-        client.download_incremental(base_dir=base_dir, dry_run=dry_run, overwrite=overwrite)
+        client._download_pmc_incremental(base_dir=base_dir, dry_run=dry_run, overwrite=overwrite)
 
     except Exception as e:
         logger.error(f"Error downloading incremental: {str(e)}")

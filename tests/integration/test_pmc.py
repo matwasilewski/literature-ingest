@@ -38,6 +38,6 @@ def test_download_baselines(temp_baseline_dir):
     """Test downloading baseline files"""
     client = PMCFTPClient()
     client.connect()
-    client.download_baselines(base_dir=temp_baseline_dir, dry_run=True)
+    client._download_pmc_baselines(base_dir=temp_baseline_dir, dry_run=True)
     client.close()
     assert True
