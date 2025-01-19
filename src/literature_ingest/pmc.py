@@ -170,7 +170,7 @@ class PMCFTPClient:
         return downloaded_files
 
 
-    def _download_pmc_baselines_sample(self, base_dir: Path = Path('data/pmc/baselines'), file_names: List[str] = ['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz'], dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+    def _download_pmc_baselines_sample(self, base_dir: Path, file_names: List[str], dry_run: bool = False, overwrite: bool = False) -> List[Path]:
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
 

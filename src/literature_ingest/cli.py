@@ -242,6 +242,25 @@ def ingest_pmc_sample(file_names: List[str]):
 
 @pipelines.command()
 @click.option(
+    "--file-names",
+    default=['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz'],
+    help="File names to download",
+    type=str,
+    multiple=True,
+)
+def ingest_pubmed_sample(file_names: List[str]):
+    """Ingest PMC sample data."""
+    click.echo("Ingesting Pubmed sample data...")
+    asyncio.run(pipeline_ingest_pubmed_sample(
+        raw_dir=Path("data/pipelines/sample_pubmed/raw/"),
+        unzipped_dir=Path("data/pipelines/sample_pubmed/unzipped/"),
+        parsed_dir=Path("data/pipelines/sample_pubmed/parsed/"),
+        file_names=file_names
+    ))
+    click.echo("DONE: Ingest Pubmed sample data")
+
+@pipelines.command()
+@click.option(
     "--file-list",
     default=None,
     help="List of files to parse",
