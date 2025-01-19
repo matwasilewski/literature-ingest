@@ -122,26 +122,24 @@ class PubMedParser:
 
         return authors
 
-    def _extract_keywords(self, article_elem) -> list[str]:
+    def _extract_keywords(self, medline_citation) -> list[str]:
         """Extract keywords from MeSH headings"""
         keywords = set()
 
-        # Find MedlineCitation first
-        medline_citation = article_elem.find("../..")
         if medline_citation is None:
             return list(keywords)
 
-        # Extract from ChemicalList
+        # Extract from ChemicalList - search relative to Article
         chemical_list = medline_citation.find("ChemicalList")
         if chemical_list is not None:
-            for chemical in chemical_list.findall(".//NameOfSubstance"):
+            for chemical in chemical_list.findall("Chemical/NameOfSubstance"):
                 if chemical.text:
                     keywords.add(chemical.text)
 
-        # Extract from MeshHeadingList
+        # Extract from MeshHeadingList - search relative to Article
         mesh_list = medline_citation.find("MeshHeadingList")
         if mesh_list is not None:
-            for mesh in mesh_list.findall(".//DescriptorName"):
+            for mesh in mesh_list.findall("MeshHeading/DescriptorName"):
                 if mesh.text:
                     keywords.add(mesh.text)
 
@@ -232,7 +230,8 @@ class PubMedParser:
         authors = self._extract_authors(article)
 
         # Get keywords from MeSH terms
-        keywords = self._extract_keywords(article)
+        medlineCitation = root.find(".//PubmedArticle/MedlineCitation")
+        keywords = self._extract_keywords(medlineCitation)
 
         # Get subject groups
         subject_groups = self._extract_subject_groups(article)

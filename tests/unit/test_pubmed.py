@@ -53,11 +53,10 @@ async def test_parse_doc_dates(pubmed_doc):
     assert doc.year == 1975
     assert doc.publication_dates.collection_date == "1975-6"
 
-@pytest.mark.asyncio
-async def test_parse_doc_content(pubmed_doc):
+def test_parse_doc_content(pubmed_doc):
     """Test document content parsing"""
     parser = PubMedParser()
-    doc = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    doc = parser._parse_doc_sync(pubmed_doc, Path("test.xml"))
 
     # Test keywords/MeSH terms
     assert "Formates" in doc.keywords
