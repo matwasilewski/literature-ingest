@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Dict, List, Optional, Set
 from pydantic import BaseModel
+import datetime
 
 
 class ArticleType(str, Enum):
@@ -132,6 +133,8 @@ class Document(BaseModel):
     license_type: Optional[str] = None
     copyright_statement: Optional[str] = None
     copyright_year: Optional[str] = None
+
+    parsed_date: datetime.datetime = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     def __init__(self, **data):
         # Generate synthetic_id from ids before calling parent constructor

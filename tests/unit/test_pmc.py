@@ -260,7 +260,7 @@ def test_doc_2(pmc_doc_2):
 def test_document_to_raw_text_minimal():
     """Test Document.to_raw_text() with minimal document"""
     doc = Document(
-        id=DocumentId(id="TEST123", type="test"),
+        ids=[DocumentId(id="TEST123", type="test")],
         title="Test Title",
         abstract="Test abstract",
         sections=[

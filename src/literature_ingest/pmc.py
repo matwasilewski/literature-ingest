@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple
 import re
 from cloudpathlib import CloudPath
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 
 
 from click import Path
@@ -539,7 +540,8 @@ class PMCParser:
             sections=sections,
             license_type=license_type,
             copyright_statement=copyright_statement,
-            copyright_year=copyright_year
+            copyright_year=copyright_year,
+            parsed_date=datetime.now(timezone.utc)
         )
 
     def parse_docs(self, files: List[Path], output_dir: Path) -> List[Path]:
