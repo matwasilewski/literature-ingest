@@ -67,12 +67,9 @@ def parse_doc(input_path: str, output_path: str, format: str):
         with open(input_path, 'r') as f:
             xml_content = f.read()
 
-        # Normalize the document
-        normalized_content = normalize_document(xml_content)
-
         # Parse document
         parser = PMCParser()
-        doc = parser.parse_doc(normalized_content)
+        doc = parser.parse_doc(xml_content)
 
         # Write output based on format
         with open(output_path, 'w') as f:

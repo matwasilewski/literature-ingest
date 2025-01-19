@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 import ftplib
+from literature_ingest.normalization import normalize_document
 from literature_ingest.utils.logging import log
 from typing import Dict, List, Optional, Tuple
 import re
@@ -426,6 +427,10 @@ class PMCParser:
 
     def parse_doc(self, file_contents: str) -> Document:
         """Parse PMC XML document and extract relevant information"""
+
+        # Normalize the document
+        normalized_content = normalize_document(file_contents)
+
         root = ET.fromstring(file_contents)
 
         # Extract front matter which contains metadata
