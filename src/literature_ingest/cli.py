@@ -287,7 +287,7 @@ def parse_missing_files_in_pmc(file_list: Optional[str]):
 
     if len(failed_files) > 0:
         click.echo(f"Failed files: {failed_files}")
-        if file_list is None:
+        if file_list is None or not isinstance(file_list, Path):
             file_list = Path("data/pipelines/pmc/failed_files.txt")
         updated_file_list = file_list.stem + datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d-%H-%M-%S") + ".txt"
 
