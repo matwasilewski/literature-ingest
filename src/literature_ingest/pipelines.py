@@ -28,16 +28,17 @@ def pipeline_parse_missing_files_in_pmc(
         unzipped_files: List[Path],
         parsed_dir: Path = Path("data/pipelines/pmc/parsed/"),
     ):
-    breakpoint()
     parser = PMCParser()
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # get list of files that are already parsed
-    parsed_files = list(parsed_dir.glob("*.json"))
-    parsed_files_set = set([Path(x).stem for x in parsed_files])
-    unzipped_files_set = set([Path(x).stem for x in unzipped_files])
-    unzipped_files_to_parse = unzipped_files_set - parsed_files_set
-    unzipped_files_to_parse = [Path(x) for x in unzipped_files_to_parse]
+    already_parsed_files = list(parsed_dir.glob("*.json"))
+    already_parsed_files_set = set([Path(x).stem for x in already_parsed_files])
+
+    # get list of files that are not already parsed
+    unzipped_files_set = {Path(x).stem: x for x in unzipped_files}
+    unzipped_files_to_parse = {k: v for k, v in unzipped_files_set.items() if k not in already_parsed_files_set}
+    unzipped_files_to_parse = list(unzipped_files_to_parse.values())
 
     print(f"Parsing {len(unzipped_files_to_parse)} files, out of total available {len(unzipped_files)}...")
     parsed_files = parser.parse_docs(unzipped_files_to_parse, parsed_dir)
