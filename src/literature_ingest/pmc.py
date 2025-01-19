@@ -410,7 +410,18 @@ class PMCParser:
 
         # Get title
         title_elem = article_meta.find(".//article-title")
-        title = ''.join(title_elem.itertext()).strip() if title_elem is not None else None
+        title = None
+        if title_elem is not None:
+            title = ''.join(title_elem.itertext()).strip()
+        else:
+            # For correction articles, the title is often in the first paragraph
+            if root.get("article-type") == "correction":
+                first_p = root.find(".//body/p")
+                if first_p is not None:
+                    title = ''.join(first_p.itertext()).strip()
+
+        if title is None:
+            title = "Untitled Article"  # Provide a default title to satisfy validation
 
         # Get journal metadata
         journal_meta = front.find(".//journal-meta")
