@@ -5,7 +5,7 @@ import asyncio
 
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.models import ArticleType, Document
-from literature_ingest.pmc import PMCFTPClient, PMCParser
+from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PMCFTPClient, PMCParser
 from pydantic import BaseModel
 
 class PipelineResult(BaseModel):
@@ -79,7 +79,7 @@ async def pipeline_ingest_pmc_sample(
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
-    pmc_downloader = PMCFTPClient()
+    pmc_downloader = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
 
     print("Downloading PMC baselines...")
     baseline_files_downloaded = pmc_downloader._download_pmc_baselines_sample(raw_dir, file_names=file_names)
@@ -114,7 +114,7 @@ async def pipeline_ingest_pmc(
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
-    pmc_downloader = PMCFTPClient()
+    pmc_downloader = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
 
     print("Downloading PMC baselines...")
     baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir)

@@ -3,7 +3,7 @@ from literature_ingest.models import ArticleType, Section
 import pytest
 from unittest.mock import Mock
 from literature_ingest.pmc import (
-    PMCFTPClient, PMCParser, Document, DocumentId, Author,
+    PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PMCFTPClient, PMCParser, Document, DocumentId, Author,
     JournalMetadata, PublicationDates
 )
 import json
@@ -11,7 +11,7 @@ import asyncio
 
 def test_get_baseline_date_success():
     # Arrange
-    client = PMCFTPClient()
+    client = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
 
     # Act
     result_date, result_files = client.extract_baseline_files([
@@ -28,7 +28,7 @@ def test_get_baseline_date_success():
 ])
 def test_get_baseline_date_failure(file_list):
     # Arrange
-    client = PMCFTPClient()
+    client = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
 
     # Act/Assert
     with pytest.raises(ValueError, match="Found a file with `baseline` string but no date"):

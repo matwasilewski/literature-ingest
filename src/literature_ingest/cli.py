@@ -5,7 +5,7 @@ import click
 from cloudpathlib import CloudPath
 from literature_ingest.normalization import normalize_document
 from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_parse_missing_files_in_pmc
-from literature_ingest.pmc import PMCFTPClient, PMCParser
+from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
 import asyncio
 
@@ -19,7 +19,9 @@ def convert_to_cloudpath(path: Path) -> Union[CloudPath, Path]:
 def get_client(source: str):
     """Get the appropriate client based on source."""
     if source.upper() == "PMC":
-        return PMCFTPClient()
+        return PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
+    elif source.upper() == "PUBMED":
+        return PMCFTPClient(path_prefix=PUBMED_OPEN_ACCESS_DIR)
     raise click.ClickException(f"Unknown source: {source}")
 
 @click.group()
