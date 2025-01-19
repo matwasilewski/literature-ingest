@@ -559,6 +559,7 @@ class PMCParser:
     def parse_docs(self, files: List[Path], output_dir: Path) -> List[Path]:
         """Parse a list of PMC XML files and save to output_dir"""
         documents = []
+        counter = 0
 
         for file in files:
             file_name = file.stem + '.json'
@@ -566,6 +567,9 @@ class PMCParser:
             try:
                 with file.open(mode='r') as f:
                     doc = self.parse_doc(file, f.read())
+                    counter += 1
+                    if counter % 1000 == 0:
+                        log.info(f"Parsed {counter} files")
 
                 with open(output_dir / file_name, 'w') as f:
                     f.write(doc.model_dump_json(indent=2))
