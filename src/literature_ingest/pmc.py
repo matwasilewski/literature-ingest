@@ -21,6 +21,7 @@ class PMCFTPClient:
         self.host = PMC_FTP_HOST
         self.pmc_open_access_noncommercial_xml_dir = PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR
         self.ftp = None
+        self.connect()
 
     def connect(self) -> None:
         """Establish connection to the PMC FTP server"""
@@ -151,6 +152,27 @@ class PMCFTPClient:
 
         # Get list of remote files
         raw_file_names = self.list_directory()
+
+        # Extract baseline date and files
+        baseline_date, baseline_files = self.extract_baseline_files(raw_file_names)
+
+        # Create dated directory
+        dated_dir = base_dir / baseline_date
+        dated_dir.mkdir(parents=True, exist_ok=True)
+
+        downloaded_files = self._download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
+        return downloaded_files
+
+
+    def _download_pmc_baselines_sample(self, base_dir: Path = Path('data/pmc/baselines'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+        if not self.ftp:
+            raise ConnectionError("Not connected to FTP server")
+
+        # Create base directory if it doesn't exist
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+        # Get list of remote files
+        raw_file_names = ['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz ']
 
         # Extract baseline date and files
         baseline_date, baseline_files = self.extract_baseline_files(raw_file_names)
