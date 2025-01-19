@@ -21,6 +21,8 @@ class ArticleType(str, Enum):
     DATA_PAPER = "Data Paper"
     METHODS_ARTICLE = "Methods Article"
     SYSTEMATIC_REVIEW = "Systematic Review"
+    CHAPTER_ARTICLE = "Chapter Article"
+    COMMUNITY_COMMENT = "Community Comment"
 
 PMC_ARTICLE_TYPE_MAP = {
     "research-article": ArticleType.RESEARCH_ARTICLE,
@@ -30,6 +32,8 @@ PMC_ARTICLE_TYPE_MAP = {
     "data-paper": ArticleType.DATA_PAPER,
     "methods-article": ArticleType.METHODS_ARTICLE,
     "systematic-review": ArticleType.SYSTEMATIC_REVIEW,
+    "chapter-article": ArticleType.CHAPTER_ARTICLE,
+    "community-comment": ArticleType.COMMUNITY_COMMENT,
     "editorial": ArticleType.EDITORIAL,
     "letter": ArticleType.LETTER,
     "article-commentary": ArticleType.COMMENT,

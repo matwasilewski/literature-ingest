@@ -38,7 +38,7 @@ def test_parse_doc_basic_fields(pmc_doc):
     parser = PMCParser()
     doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
-    # Test core identifiers
+    # Test core identifiersSYT
     assert isinstance(doc, Document)
     assert doc.ids == [
         DocumentId(id="10.1016/j.ijcchd.2022.100354", type="doi"),
