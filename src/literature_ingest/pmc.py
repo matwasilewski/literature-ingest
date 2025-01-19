@@ -16,6 +16,7 @@ from literature_ingest.models import PMC_ARTICLE_TYPE_MAP, ArticleType, Author, 
 from pydantic import BaseModel
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import multiprocessing
 
 PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
 PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR = '/pub/pmc/oa_bulk/oa_noncomm/xml'
@@ -192,7 +193,11 @@ class PMCFTPClient:
 class PMCParser:
     def __init__(self):
         self.unique_article_types = defaultdict(int)
-        self._executor = ThreadPoolExecutor()
+        # Use number of CPU cores for ThreadPoolExecutor
+        self._cpu_count = multiprocessing.cpu_count()
+        self._executor = ThreadPoolExecutor(max_workers=self._cpu_count)
+        # Match semaphore to CPU count to avoid oversubscription
+        self._semaphore = asyncio.Semaphore(self._cpu_count)
         pass
 
     def print_article_type_distribution(self):
@@ -573,16 +578,17 @@ class PMCParser:
             nonlocal counter
             file_name = file.stem + '.json'
             try:
-                with file.open(mode='r') as f:
-                    doc = await self.parse_doc(f.read(), file)
-                    counter += 1
-                    if counter % 1000 == 0:
-                        log.info(f"Parsed {counter} files")
+                async with self._semaphore:  # Use semaphore to limit concurrent operations
+                    with file.open(mode='r') as f:
+                        doc = await self.parse_doc(f.read(), file)
+                        counter += 1
+                        if counter % 1000 == 0:
+                            log.info(f"Parsed {counter} files")
 
-                output_path = output_dir / file_name
-                with open(output_path, 'w') as f:
-                    f.write(doc.model_dump_json(indent=2))
-                return output_path
+                    output_path = output_dir / file_name
+                    with open(output_path, 'w') as f:
+                        f.write(doc.model_dump_json(indent=2))
+                    return output_path
             except Exception as e:
                 log.error(f"Error parsing {file.name}: {str(e)}")
                 return None
