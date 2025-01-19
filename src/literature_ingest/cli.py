@@ -237,7 +237,6 @@ def ingest_pmc():
     click.echo("DONE: Ingest PMC data")
 
 
-
 @pipelines.command()
 @click.option(
     "--file-names",
@@ -256,6 +255,7 @@ def ingest_pmc_sample(file_names: List[str]):
         file_names=file_names
     )
     click.echo("DONE: Ingest PMC sample data")
+
 
 @pipelines.command()
 @click.option(
@@ -276,6 +276,8 @@ def parse_missing_files_in_pmc(file_list: Optional[str]):
         if len(missing_files) == 0:
             click.echo("No missing files found")
             return
+        click.echo(f"Found {len(missing_files)} missing files")
+        file_list = missing_files
     else:
         file_list = Path(file_list).open().read().splitlines()
 
