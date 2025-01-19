@@ -70,7 +70,7 @@ def parse_doc(input_path: str, output_path: str, format: str):
 
         # Parse document
         parser = PMCParser()
-        doc = parser.parse_doc(xml_content)
+        doc = parser.parse_doc(xml_content, Path(input_path))
 
         # Write output based on format
         with open(output_path, 'w') as f:
@@ -199,7 +199,7 @@ def parse_docs(input_dir: str, output_dir: str, format: str, pattern: str):
                     xml_content = f.read()
 
                 # Parse document
-                doc = parser.parse_doc(xml_content)
+                doc = parser.parse_doc(xml_content, Path(xml_file))
 
                 # Create output filename with appropriate extension
                 output_ext = ".json" if format == "json" else ".txt"

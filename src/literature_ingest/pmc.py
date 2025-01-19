@@ -432,7 +432,7 @@ class PMCParser:
 
         return ids_list
 
-    def parse_doc(self, file_name: Path, file_contents: str) -> Document:
+    def parse_doc(self, file_contents: str, file_name: Path) -> Document:
         """Parse PMC XML document and extract relevant information"""
 
         # Normalize the document
@@ -566,7 +566,7 @@ class PMCParser:
 
             try:
                 with file.open(mode='r') as f:
-                    doc = self.parse_doc(file, f.read())
+                    doc = self.parse_doc(f.read(), file)
                     counter += 1
                     if counter % 1000 == 0:
                         log.info(f"Parsed {counter} files")

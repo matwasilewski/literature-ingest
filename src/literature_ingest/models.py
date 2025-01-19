@@ -20,6 +20,7 @@ class ArticleType(str, Enum):
     RETRACTION = "Retraction"
     DATA_PAPER = "Data Paper"
     METHODS_ARTICLE = "Methods Article"
+    SYSTEMATIC_REVIEW = "Systematic Review"
 
 PMC_ARTICLE_TYPE_MAP = {
     "research-article": ArticleType.RESEARCH_ARTICLE,

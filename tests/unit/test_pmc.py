@@ -1,3 +1,4 @@
+from pathlib import Path
 from literature_ingest.models import ArticleType, Section
 import pytest
 from unittest.mock import Mock
@@ -35,7 +36,7 @@ def test_get_baseline_date_failure(file_list):
 def test_parse_doc_basic_fields(pmc_doc):
     """Test basic document field parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc)
+    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Test core identifiers
     assert isinstance(doc, Document)
@@ -62,7 +63,7 @@ def test_parse_doc_basic_fields(pmc_doc):
 def test_parse_doc_authors(pmc_doc):
     """Test author information parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc)
+    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Test authors list
     assert len(doc.authors) == 9
@@ -80,7 +81,7 @@ def test_parse_doc_authors(pmc_doc):
 def test_parse_doc_dates(pmc_doc):
     """Test publication dates parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc)
+    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     assert isinstance(doc.publication_dates, PublicationDates)
     assert doc.year == 2022
@@ -92,7 +93,7 @@ def test_parse_doc_dates(pmc_doc):
 def test_parse_doc_content(pmc_doc):
     """Test document content parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc)
+    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Test abstract
     assert "Pulmonary hypertension (PH) due to left heart disease" in doc.abstract
@@ -108,7 +109,7 @@ def test_parse_doc_content(pmc_doc):
 def test_parse_doc_license(pmc_doc):
     """Test license and copyright information parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc)
+    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     assert doc.license_type == "https://creativecommons.org/licenses/by-nc-nd/4.0/"
     assert "© 2022 The Authors" in doc.copyright_statement
@@ -117,7 +118,7 @@ def test_parse_doc_license(pmc_doc):
 def test_parse_doc_sections(pmc_doc):
     """Test document section parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc)
+    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Test that sections were extracted
     assert len(doc.sections) > 0
@@ -145,7 +146,7 @@ def test_parse_doc_sections(pmc_doc):
 def test_parse_doc_section_hierarchy(pmc_doc):
     """Test that section hierarchy is correctly preserved"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc)
+    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Find the Methods section
     methods = next(s for s in doc.sections if s.title == "Methods")
@@ -161,7 +162,7 @@ def test_parse_doc_section_hierarchy(pmc_doc):
 def test_parse_doc_section_content(pmc_doc):
     """Test that section content is correctly extracted"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc)
+    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Find the Discussion section
     discussion = next(s for s in doc.sections if s.title == "Discussion")
@@ -177,7 +178,7 @@ def test_parse_doc_section_content(pmc_doc):
 def test_document_to_raw_text(pmc_doc):
     """Test Document.to_raw_text() method"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc)
+    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     raw_text = doc.to_raw_text()
 
@@ -202,7 +203,7 @@ def test_document_to_raw_text(pmc_doc):
 def test_document_to_json(pmc_doc):
     """Test Document.to_json() method"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc)
+    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     json_str = doc.to_json()
 
@@ -238,7 +239,7 @@ def test_document_to_json(pmc_doc):
 
 def test_doc_2(pmc_doc_2):
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc_2)
+    doc = parser.parse_doc(pmc_doc_2, Path("test.xml"))
     assert doc
 
     assert doc.title == "Co-regulation of intragenic microRNA miR-153 and its host gene Ia-2β: identification of miR-153 target genes with functions related to IA-2β in pancreas and brain"
@@ -393,7 +394,7 @@ def test_document_load_from_json():
 ])
 def test_parse_doc_with_error(request, pmc_doc_fixture):
     parser = PMCParser()
-    doc = parser.parse_doc(request.getfixturevalue(pmc_doc_fixture))
+    doc = parser.parse_doc(request.getfixturevalue(pmc_doc_fixture), Path(f"{pmc_doc_fixture}.xml"))
     # Create output filename based on fixture name
     output_filename = f"{pmc_doc_fixture}.json"
     with open(f"tests/resources/{output_filename}", "w") as f:
