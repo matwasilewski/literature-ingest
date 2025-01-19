@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union
 import click
 from cloudpathlib import CloudPath
-from literature_ingest.pipelines import pipeline_ingest_pmc
+from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample
 from literature_ingest.pmc import PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
 
@@ -238,7 +238,7 @@ def ingest_pmc():
 def ingest_pmc_sample():
     """Ingest PMC sample data."""
     click.echo("Ingesting PMC sample data...")
-    pipeline_ingest_pmc(
+    pipeline_ingest_pmc_sample(
         source_dir=Path("data/pipelines/sample_pmc/raw/"),
         unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/"),
         parsed_dir=Path("data/pipelines/sample_pmc/parsed/")
