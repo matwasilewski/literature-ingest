@@ -397,6 +397,6 @@ def test_parse_doc_with_error(request, pmc_doc_fixture):
     doc = parser.parse_doc(request.getfixturevalue(pmc_doc_fixture), Path(f"{pmc_doc_fixture}.xml"))
     # Create output filename based on fixture name
     output_filename = f"{pmc_doc_fixture}.json"
-    with open(f"tests/resources/{output_filename}", "w") as f:
+    with open(f"tests/resources/json_versions/{output_filename}", "w") as f:
         f.write(doc.to_json())
     assert doc
