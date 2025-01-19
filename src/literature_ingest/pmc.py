@@ -439,7 +439,7 @@ class PMCParser:
         self.unique_article_types[root.get("article-type", None)] += 1
         # Get article type
         if root.get("article-type", None) is None or root.get("article-type", None) not in PMC_ARTICLE_TYPE_MAP:
-            log.warn(f"File: {file_name.name} - Article type not found in {root.get('article-type', None)}")
+            log.warn(f"File: {file_name.name} - Article type: {root.get('article-type', None)} not known!")
             article_type = None
         else:
             article_type = PMC_ARTICLE_TYPE_MAP.get(root.get("article-type"), ArticleType.OTHER)
