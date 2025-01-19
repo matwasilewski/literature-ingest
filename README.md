@@ -2,6 +2,8 @@
 
 Tool for ingesting and processing literature data.
 
+Contains utilities for downloading, parsing and uploading biomedical literature data.
+
 ## Setup
 
 ```bash
@@ -15,6 +17,12 @@ The primary way to use this project is:
 ```bash
 uv run ingest  # Run the main ingestion pipeline
 ```
+
+## Pipelines
+
+Currently, all pipelines (predefined workflows) are codified in the `pipelines.py` file.
+The project is in the alpha stage, and we expect to refactor it later and perhaps move the pipelines to a framework such as Kedro.
+
 
 ## Development
 
