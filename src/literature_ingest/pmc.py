@@ -427,9 +427,10 @@ class PMCParser:
         for article_id in article_meta.findall(".//article-id"):
             id_type = article_id.get("pub-id-type")
             if article_id.text:
-                doc_id = DocumentId(id=article_id.text, type=id_type)
-                ids.append(doc_id)
-                ids_set.add(f"type={id_type};id={article_id.text}")
+                ids_set.add(article_id.text)
+                ids.append(DocumentId(id=article_id.text, type=id_type))
+
+        synthetic_id = "&".join([f"type={id.type};id={id.id}" for id in ids if id.type != "publisher-id"])
 
         # Get title
         title_elem = article_meta.find(".//article-title")
@@ -505,6 +506,7 @@ class PMCParser:
             sections = self._extract_sections(body)
 
         return Document(
+            synthetic_id=synthetic_id,
             ids=ids,
             ids_set=ids_set,
             title=title,

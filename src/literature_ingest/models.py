@@ -99,6 +99,8 @@ class Section(BaseModel):
 
 class Document(BaseModel):
     """Represents a PMC document with enhanced metadata"""
+    synthetic_id: str
+
     # Core identifiers
     ids: List[DocumentId] = []
     ids_set: Set[str] = set()
