@@ -1,6 +1,6 @@
 import datetime
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 import click
 from cloudpathlib import CloudPath
 from literature_ingest.normalization import normalize_document
@@ -261,18 +261,25 @@ def ingest_pmc_sample(file_names: List[str]):
 @click.option(
     "--file-list",
     default=None,
-    required=True,
     help="List of files to parse",
     type=click.Path(exists=True, file_okay=True, dir_okay=False),
 )
-def parse_missing_files_in_pmc(file_list: str):
+def parse_missing_files_in_pmc(file_list: Optional[str]):
     """Parse missing files in PMC."""
-    file_list = Path(file_list)
+    unzipped_dir = Path("data/pipelines/pmc/unzipped/")
+    parsed_dir = Path("data/pipelines/pmc/parsed/")
+    files_in_parsed = set([x.stem for x in parsed_dir.glob("*.json")])
+    # retrieve the list of missing files from the unzipped directory
 
-    with open(file_list, 'r') as f:
-        file_list = Path(f.read().splitlines())
+    if file_list is None:
+        missing_files = [Path(x) for x in unzipped_dir.glob("*.xml") if x.stem not in files_in_parsed]
+        if len(missing_files) == 0:
+            click.echo("No missing files found")
+            return
+    else:
+        file_list = Path(file_list).open().read().splitlines()
 
-    click.echo("Parsing missing files in PMC...")
+    click.echo(f"Parsing {len(file_list)} missing files in PMC...")
     parsed_files, failed_files = pipeline_parse_missing_files_in_pmc(file_list)
     click.echo(f"DONE: Parsed {len(parsed_files)} files, failed {len(failed_files)} files")
 
