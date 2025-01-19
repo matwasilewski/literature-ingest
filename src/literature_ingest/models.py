@@ -99,8 +99,6 @@ class Section(BaseModel):
 
 class Document(BaseModel):
     """Represents a PMC document with enhanced metadata"""
-    synthetic_id: str
-
     # Core identifiers
     ids: List[DocumentId] = []
 
@@ -108,6 +106,9 @@ class Document(BaseModel):
     title: str
     raw_type: Optional[str] = None
     type: Optional[ArticleType] = None
+
+    # Computed fields
+    synthetic_id: str = ""
 
     # Journal information
     journal: Optional[JournalMetadata] = None
@@ -131,6 +132,15 @@ class Document(BaseModel):
     license_type: Optional[str] = None
     copyright_statement: Optional[str] = None
     copyright_year: Optional[str] = None
+
+    def __init__(self, **data):
+        # Generate synthetic_id from ids before calling parent constructor
+        if 'ids' in data and not data.get('synthetic_id'):
+            # Filter out publisher-id and sort by type
+            filtered_ids = [id for id in data['ids'] if isinstance(id, DocumentId) and id.type != "publisher-id"]
+            data['synthetic_id'] = "&".join([f"type={id.type};id={id.id}" for id in filtered_ids])
+
+        super().__init__(**data)
 
     def to_json(self, indent: int = 2) -> str:
         """Convert document to JSON string"""

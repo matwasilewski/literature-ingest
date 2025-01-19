@@ -210,8 +210,14 @@ def test_document_to_json(pmc_doc):
     json_data = json.loads(json_str)
 
     # Check core fields
-    assert json_data["id"]["id"] == "PMC10335194"
-    assert json_data["id"]["type"] == "pmc"
+    assert json_data["synthetic_id"] == doc.synthetic_id
+    assert json_data["ids"] == [
+        {"id": "10.1016/j.ijcchd.2022.100354", "type": "doi"},
+        {"id": "PMC10335194", "type": "pmc"},
+        {"id": "37435574", "type": "pmid"},
+        {"id": "S2666-6685(22)00037-4", "type": "pii"},
+        {"id": "100354", "type": "publisher-id"},
+    ]
     assert json_data["title"] == doc.title
     assert json_data["type"] == "Research Article"
 
@@ -283,15 +289,17 @@ def test_document_to_raw_text_minimal():
 def test_document_to_json_minimal():
     """Test Document.to_json() with minimal document"""
     doc = Document(
-        id=DocumentId(id="TEST123", type="test"),
+        ids=[DocumentId(id="TEST123", type="test")],
         title="Test Title"
     )
 
     json_str = doc.to_json()
     json_data = json.loads(json_str)
 
-    assert json_data["id"]["id"] == "TEST123"
-    assert json_data["id"]["type"] == "test"
+    assert json_data["synthetic_id"] == doc.synthetic_id
+    assert json_data["ids"] == [
+        {"id": "TEST123", "type": "test"},
+    ]
     assert json_data["title"] == "Test Title"
     assert json_data["sections"] == []
     assert json_data["keywords"] == []
