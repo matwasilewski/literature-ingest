@@ -1,6 +1,6 @@
 pytest
 click
-cloudpathlib
+cloudpathlib[gs]
 ujson
 json_log_formatter
 tomlkit
