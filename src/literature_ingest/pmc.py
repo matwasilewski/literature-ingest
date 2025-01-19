@@ -590,9 +590,10 @@ class PMCParser:
                     with file.open(mode='r') as f:
                         doc = await self.parse_doc(f.read(), file)
                         counter += 1
-                        elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
-                        log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
-                        timestamp = datetime.now(timezone.utc)
+                        if counter % 10000 == 0:
+                            elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
+                            log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
+                            timestamp = datetime.now(timezone.utc)
 
                     output_path = output_dir / file_name
                     with open(output_path, 'w') as f:
