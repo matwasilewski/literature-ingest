@@ -403,6 +403,26 @@ class PMCParser:
 
         return sections
 
+    def _reorder_ids(self, ids: List[DocumentId]) -> List[DocumentId]:
+        """Reorder the IDs by type (doi, pmc, pmid, pii, *, publisher-id)"""
+        explicit_id_types_order = ["doi", "pmc", "pmid", "pii", "publisher-id"]
+        # Return the IDs in the order of explicit_id_types_order
+        ids_list = []
+        id2type2id = {}
+        for id in ids:
+            id2type2id[id.type] = id.id
+
+        for id_type in explicit_id_types_order:
+            if id_type in id2type2id:
+                ids_list.append(DocumentId(id=id2type2id[id_type], type=id_type))
+
+        # Add any remaining IDs that are not in the explicit_id_types_order
+        for id in ids:
+            if id.type not in explicit_id_types_order:
+                ids_list.append(id)
+
+        return ids_list
+
     def parse_doc(self, file_contents: str) -> Document:
         """Parse PMC XML document and extract relevant information"""
         root = ET.fromstring(file_contents)
@@ -427,8 +447,10 @@ class PMCParser:
         for article_id in article_meta.findall(".//article-id"):
             id_type = article_id.get("pub-id-type")
             if article_id.text:
-                ids_set.add(article_id.text)
                 ids.append(DocumentId(id=article_id.text, type=id_type))
+
+        # reorder the IDs by type (doi, pmc, pmid, pii, *, publisher-id)
+        ids = self._reorder_ids(ids)
 
         synthetic_id = "&".join([f"type={id.type};id={id.id}" for id in ids if id.type != "publisher-id"])
 

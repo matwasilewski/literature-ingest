@@ -40,13 +40,13 @@ def test_parse_doc_basic_fields(pmc_doc):
     # Test core identifiers
     assert isinstance(doc, Document)
     assert doc.ids == [
-        DocumentId(id="37435574", type="pmid"),
-        DocumentId(id="PMC10335194", type="pmc"),
-        DocumentId(id="S2666-6685(22)00037-4", type="pii"),
         DocumentId(id="10.1016/j.ijcchd.2022.100354", type="doi"),
+        DocumentId(id="PMC10335194", type="pmc"),
+        DocumentId(id="37435574", type="pmid"),
+        DocumentId(id="S2666-6685(22)00037-4", type="pii"),
         DocumentId(id="100354", type="publisher-id"),
     ]
-    assert doc.synthetic_id == "type=pmc;id=PMC10335194&type=pmid;id=37435574&type=doi;id=10.1016/j.ijcchd.2022.100354&type=pii;id=S2666-6685(22)00037-4"
+    assert doc.synthetic_id == "type=doi;id=10.1016/j.ijcchd.2022.100354&type=pmc;id=PMC10335194&type=pmid;id=37435574&type=pii;id=S2666-6685(22)00037-4"
 
     # Test basic metadata
     assert doc.title == "Maternal and fetal outcomes in pregnant women with pulmonary hypertension: The impact of left heart disease"

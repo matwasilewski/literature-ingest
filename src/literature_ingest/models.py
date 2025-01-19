@@ -103,7 +103,6 @@ class Document(BaseModel):
 
     # Core identifiers
     ids: List[DocumentId] = []
-    ids_set: Set[str] = set()
 
     # Basic metadata
     title: str
