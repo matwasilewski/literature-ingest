@@ -89,7 +89,7 @@ def parse_doc(input_path: str, output_path: str, format: str):
 )
 @click.option(
     "--base-dir",
-    default=Path("data/baselines"),
+    default=Path("data/pmc/baselines"),
     help="Directory to store downloaded baseline files",
     type=Path,
 )
@@ -124,7 +124,7 @@ def download_pmc_baselines(dry_run: bool, base_dir: Path, overwrite: bool):
 )
 @click.option(
     "--base-dir",
-    default=Path("data/incremental"),
+    default=Path("data/pmc/incremental"),
     help="Directory to store downloaded incremental files",
     type=Path,
 )
