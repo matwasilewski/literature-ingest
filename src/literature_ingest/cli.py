@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union
+from typing import List, Union
 import click
 from cloudpathlib import CloudPath
 from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample
@@ -235,12 +235,20 @@ def ingest_pmc():
 
 
 @pipelines.command()
-def ingest_pmc_sample():
+@click.option(
+    "--file-names",
+    default=['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz'],
+    help="File names to download",
+    type=str,
+    multiple=True,
+)
+def ingest_pmc_sample(file_names: List[str]):
     """Ingest PMC sample data."""
     click.echo("Ingesting PMC sample data...")
     pipeline_ingest_pmc_sample(
         source_dir=Path("data/pipelines/sample_pmc/raw/"),
         unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/"),
-        parsed_dir=Path("data/pipelines/sample_pmc/parsed/")
+        parsed_dir=Path("data/pipelines/sample_pmc/parsed/"),
+        file_names=file_names
     )
     click.echo("DONE: Ingest PMC sample data")

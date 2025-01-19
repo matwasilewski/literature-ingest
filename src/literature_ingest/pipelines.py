@@ -19,7 +19,7 @@ def pipeline_parse_pmc(unzipped_dir: Path, parsed_dir: Path = Path("data/pipelin
     print(f"Unique article types: {parser.unique_article_types}")
 
 
-def pipeline_ingest_pmc_sample(source_dir: Path = Path("data/pipelines/sample_pmc/raw/"), unzipped_dir: Path = Path("data/pipelines/sample_pmc/unzipped/"), parsed_dir: Path = Path("data/pipelines/sample_pmc/parsed/")):
+def pipeline_ingest_pmc_sample(source_dir: Path = Path("data/pipelines/sample_pmc/raw/"), unzipped_dir: Path = Path("data/pipelines/sample_pmc/unzipped/"), parsed_dir: Path = Path("data/pipelines/sample_pmc/parsed/"), file_names: List[str] = ['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz']):
         # Create directories
     source_dir.mkdir(parents=True, exist_ok=True)
     unzipped_dir.mkdir(parents=True, exist_ok=True)
@@ -29,7 +29,7 @@ def pipeline_ingest_pmc_sample(source_dir: Path = Path("data/pipelines/sample_pm
     pmc_downloader = PMCFTPClient()
 
     print("Downloading PMC baselines...")
-    pmc_downloader._download_pmc_baselines_sample(source_dir)
+    pmc_downloader._download_pmc_baselines_sample(source_dir, file_names=file_names)
     print(f"Downloaded {len(list(source_dir.glob('*.tar.gz')))} files...")
     print("DONE: Download PMC data")
 
