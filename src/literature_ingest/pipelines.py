@@ -24,7 +24,10 @@ Saving those, we can trace file lineage easily.
 
 """
 
-def pipeline_parse_missing_files(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
+def pipeline_parse_missing_files_in_pmc(
+        unzipped_files: List[Path],
+        parsed_dir: Path = Path("data/pipelines/pmc/parsed/"),
+    ):
     parser = PMCParser()
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
@@ -38,9 +41,16 @@ def pipeline_parse_missing_files(unzipped_files: List[Path], parsed_dir: Path = 
     print(f"Parsing {len(unzipped_files_to_parse)} files, out of total available {len(unzipped_files)}...")
     parsed_files = parser.parse_docs(unzipped_files_to_parse, parsed_dir)
 
+    actual_parsed_files = set(parsed_files)
+    failed_files = []
+
+    for file in unzipped_files_to_parse:
+        if file.stem + ".json" not in actual_parsed_files:
+            failed_files.append(file)
+
     print(f"Parsed {len(parsed_files)} files, out of intended {len(unzipped_files_to_parse)} - ({len(parsed_files) / len(unzipped_files_to_parse) * 100:.2f}%)...")
     parser.print_article_type_distribution()
-    return parsed_files
+    return parsed_files, failed_files
 
 
 def pipeline_parse_pmc(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):

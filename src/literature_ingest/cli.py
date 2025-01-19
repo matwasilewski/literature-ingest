@@ -1,9 +1,10 @@
+import datetime
 from pathlib import Path
 from typing import List, Union
 import click
 from cloudpathlib import CloudPath
 from literature_ingest.normalization import normalize_document
-from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample
+from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_parse_missing_files_in_pmc
 from literature_ingest.pmc import PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
 
@@ -255,3 +256,31 @@ def ingest_pmc_sample(file_names: List[str]):
         file_names=file_names
     )
     click.echo("DONE: Ingest PMC sample data")
+
+@pipelines.command()
+@click.option(
+    "--file-list",
+    default=None,
+    required=True,
+    help="List of files to parse",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+)
+def parse_missing_files_in_pmc(file_list: str):
+    """Parse missing files in PMC."""
+    file_list = Path(file_list)
+
+    with open(file_list, 'r') as f:
+        file_list = Path(f.read().splitlines())
+
+    click.echo("Parsing missing files in PMC...")
+    parsed_files, failed_files = pipeline_parse_missing_files_in_pmc(file_list)
+    click.echo(f"DONE: Parsed {len(parsed_files)} files, failed {len(failed_files)} files")
+
+    if len(failed_files) > 0:
+        click.echo(f"Failed files: {failed_files}")
+        updated_file_list = file_list.stem + datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d-%H-%M-%S") + ".txt"
+
+        with open(updated_file_list, 'w') as f:
+            f.write("\n".join(failed_files))
+
+        raise click.ClickException(f"Failed to parse some files, updated file list: {updated_file_list}")
