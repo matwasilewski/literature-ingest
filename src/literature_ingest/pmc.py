@@ -192,6 +192,13 @@ class PMCParser:
         self.unique_article_types = defaultdict(int)
         pass
 
+    def print_article_type_distribution(self):
+        total_docs = sum(self.unique_article_types.values())
+        print("Article type distribution:")
+        for article_type, count in self.unique_article_types.items():
+            percentage = (count / total_docs * 100) if total_docs > 0 else 0
+            print(f"  {article_type}: {count} ({percentage:.1f}%)")
+
     def _extract_authors(self, contrib_group) -> List[Author]:
         """Extract author information from contrib-group element"""
         authors = []
