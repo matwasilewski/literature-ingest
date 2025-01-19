@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union
 import click
 from cloudpathlib import CloudPath
-from literature_ingest.pipelines import parse_pmc_docs_sample, pipeline_ingest_pmc
+from literature_ingest.pipelines import pipeline_ingest_pmc
 from literature_ingest.pmc import PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
 
