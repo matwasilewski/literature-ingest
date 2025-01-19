@@ -19,8 +19,13 @@ def pipeline_parse_pmc(unzipped_dir: Path, parsed_dir: Path = Path("data/pipelin
     print(f"Unique article types: {parser.unique_article_types}")
 
 
-def pipeline_ingest_pmc_sample(source_dir: Path = Path("data/pipelines/sample_pmc/raw/"), unzipped_dir: Path = Path("data/pipelines/sample_pmc/unzipped/"), parsed_dir: Path = Path("data/pipelines/sample_pmc/parsed/"), file_names: List[str] = ['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz']):
-        # Create directories
+def pipeline_ingest_pmc_sample(
+        source_dir: Path = Path("data/pipelines/sample_pmc/raw/"),
+        unzipped_dir: Path = Path("data/pipelines/sample_pmc/unzipped/"),
+        parsed_dir: Path = Path("data/pipelines/sample_pmc/parsed/"),
+        file_names: List[str] = ['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz']
+    ):
+    # Create directories
     source_dir.mkdir(parents=True, exist_ok=True)
     unzipped_dir.mkdir(parents=True, exist_ok=True)
     parsed_dir.mkdir(parents=True, exist_ok=True)
@@ -47,7 +52,11 @@ def pipeline_ingest_pmc_sample(source_dir: Path = Path("data/pipelines/sample_pm
 
 
 
-def pipeline_ingest_pmc(source_dir: Path = Path("data/pipelines/pmc/raw/"), unzipped_dir: Path = Path("data/pipelines/pmc/unzipped/"), parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
+def pipeline_ingest_pmc(
+        source_dir: Path = Path("data/pipelines/pmc/raw/"),
+        unzipped_dir: Path = Path("data/pipelines/pmc/unzipped/"),
+        parsed_dir: Path = Path("data/pipelines/pmc/parsed/"),
+    ):
     # Create directories
     source_dir.mkdir(parents=True, exist_ok=True)
     unzipped_dir.mkdir(parents=True, exist_ok=True)
