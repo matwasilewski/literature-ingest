@@ -28,6 +28,7 @@ def pipeline_parse_missing_files_in_pmc(
         unzipped_files: List[Path],
         parsed_dir: Path = Path("data/pipelines/pmc/parsed/"),
     ):
+    breakpoint()
     parser = PMCParser()
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
