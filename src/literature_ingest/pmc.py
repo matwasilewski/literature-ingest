@@ -203,7 +203,13 @@ class PMCParser:
     def print_article_type_distribution(self):
         total_docs = sum(self.unique_article_types.values())
         print("Article type distribution:")
-        for article_type, count in self.unique_article_types.items():
+        # Convert to list of tuples and sort by percentage (count/total) in descending order
+        sorted_types = sorted(
+            self.unique_article_types.items(),
+            key=lambda x: (x[1] / total_docs if total_docs > 0 else 0),
+            reverse=True
+        )
+        for article_type, count in sorted_types:
             percentage = (count / total_docs * 100) if total_docs > 0 else 0
             print(f"  {article_type}: {count} ({percentage:.1f}%)")
 
@@ -572,18 +578,21 @@ class PMCParser:
         """Parse a list of PMC XML files and save to output_dir asynchronously"""
         documents = []
         counter = 0
+        timestamp = datetime.now(timezone.utc)
         tasks = []
 
         async def process_file(file: Path) -> Optional[Path]:
             nonlocal counter
+            nonlocal timestamp
             file_name = file.stem + '.json'
             try:
                 async with self._semaphore:  # Use semaphore to limit concurrent operations
                     with file.open(mode='r') as f:
                         doc = await self.parse_doc(f.read(), file)
                         counter += 1
-                        if counter % 1000 == 0:
-                            log.info(f"Parsed {counter} files")
+                        elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
+                        log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
+                        timestamp = datetime.now(timezone.utc)
 
                     output_path = output_dir / file_name
                     with open(output_path, 'w') as f:
