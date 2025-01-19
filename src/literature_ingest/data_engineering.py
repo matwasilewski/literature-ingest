@@ -16,7 +16,6 @@ def resolve_file_or_dir(target: Path, source: Path) -> Path:
         return target
 
 def unzip_and_filter(archive_file: Path, target_dir: Path, extension = ".xml", use_gsutil=False, overwrite=False) -> List[Path]:
-
     if isinstance(target_dir, CloudPath):
         # unzip locally and upload to target_dir
         with tempfile.TemporaryDirectory() as local_dir:

@@ -30,12 +30,12 @@ def pipeline_ingest_pmc_sample(source_dir: Path = Path("data/pipelines/sample_pm
 
     print("Downloading PMC baselines...")
     pmc_downloader._download_pmc_baselines_sample(source_dir, file_names=file_names)
-    print(f"Downloaded {len(list(source_dir.glob('*.tar.gz')))} files...")
+    print(f"Downloaded {len(list(source_dir.rglob('*.tar.gz')))} files...")
     print("DONE: Download PMC data")
 
     # Unzip data
     print(f"Unzipping {source_dir}...")
-    for file in source_dir.glob("*.tar.gz"):
+    for file in source_dir.rglob("*.tar.gz"):
         print(f"Unzipping {file}...")
         unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
         print(f"Unzipped {len(unzipped_files_list)} files...")
@@ -60,12 +60,12 @@ def pipeline_ingest_pmc(source_dir: Path = Path("data/pipelines/pmc/raw/"), unzi
     pmc_downloader._download_pmc_baselines(source_dir)
     print("Downloading PMC incremental...")
     pmc_downloader._download_pmc_incremental(source_dir)
-    print(f"Downloaded {len(list(source_dir.glob('*.tar.gz')))} files...")
+    print(f"Downloaded {len(list(source_dir.rglob('*.tar.gz')))} files...")
     print("DONE: Download PMC data")
 
     # Unzip data
     print(f"Unzipping {source_dir}...")
-    for file in source_dir.glob("*.tar.gz"):
+    for file in source_dir.rglob("*.tar.gz"):
         print(f"Unzipping {file}...")
         unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
         print(f"Unzipped {len(unzipped_files_list)} files...")
