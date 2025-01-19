@@ -5,3 +5,4 @@ ujson
 json_log_formatter
 tomlkit
 pydantic_settings
+pytest-asyncio
