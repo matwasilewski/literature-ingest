@@ -9,3 +9,4 @@ src/literature_ingest.egg-info/dependency_links.txt
 logs/*
 secrets/*
 data/*
+.DS_Store
