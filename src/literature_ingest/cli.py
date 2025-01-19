@@ -249,7 +249,7 @@ def ingest_pmc_sample(file_names: List[str]):
     """Ingest PMC sample data."""
     click.echo("Ingesting PMC sample data...")
     pipeline_ingest_pmc_sample(
-        source_dir=Path("data/pipelines/sample_pmc/raw/"),
+        raw_dir=Path("data/pipelines/sample_pmc/raw/"),
         unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/"),
         parsed_dir=Path("data/pipelines/sample_pmc/parsed/"),
         file_names=file_names
