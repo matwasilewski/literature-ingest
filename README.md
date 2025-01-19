@@ -1,17 +1,34 @@
-# literature_ingest
+# Literature Ingest
 
-# Dev
-## Add Dependencies
-uv add pytest
+Tool for ingesting and processing literature data.
 
-New dependency will now be visible in pyproject.toml.
+## Setup
 
-To install the dependency, run `make install`.
+```bash
+make install  # Creates venv and installs dependencies
+```
 
-This will generate a locked requirements.txt file in the root of the project, and install it.
+## Usage
 
-## Run pre-commit hooks
+The primary way to use this project is:
 
-To run the pre-commit hooks, run `make precommit`.
+```bash
+uv run ingest  # Run the main ingestion pipeline
+```
 
-This will run the pre-commit hooks on the current branch and the main branch.
+## Development
+
+```bash
+make format    # Format code
+make lint      # Run linters
+make unit      # Run unit tests
+make integration  # Run integration tests
+make full_test    # Run all tests
+```
+
+## Requirements
+
+- Python 3.11+
+- uv (Python package manager)
+- Docker
+- gcloud CLI
