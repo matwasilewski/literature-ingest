@@ -6,17 +6,6 @@ from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.models import ArticleType, Document
 from literature_ingest.pmc import PMCParser
 
-# def find_clinical_trials(parsed_dir: Path) -> List[Path]:
-#     clinical_trials = []
-#     article_type_statistics = defaultdict(int)
-#     for doc in parsed_dir.glob("*.json"):
-#         document = Document.model_validate_json(doc.read_text())
-#         article_type_statistics[document.article_type] += 1
-
-#         if document.article_type == ArticleType.CLINICAL_TRIAL:
-#             if document.clinical_trials:
-#                 clinical_trials.append(doc)
-#     return clinical_trials
 
 def pipeline_parse_pmc(unzipped_dir: Path, parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
     parser = PMCParser()
@@ -31,12 +20,8 @@ def pipeline_parse_pmc(unzipped_dir: Path, parsed_dir: Path = Path("data/pipelin
 
 
 
-def pipeline_ingest_pmc():
+def pipeline_ingest_pmc(source_dir: Path = Path("data/pipelines/pmc/raw/"), unzipped_dir: Path = Path("data/pipelines/pmc/unzipped/"), parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
     # Create directories
-    source_dir = Path("data/pipelines/pmc/raw/")
-    unzipped_dir = Path("data/pipelines/pmc/unzipped/")
-    parsed_dir = Path("data/pipelines/pmc/parsed/")
-
     source_dir.mkdir(parents=True, exist_ok=True)
     unzipped_dir.mkdir(parents=True, exist_ok=True)
     parsed_dir.mkdir(parents=True, exist_ok=True)
@@ -45,9 +30,9 @@ def pipeline_ingest_pmc():
     pmc_client = PMCParser()
 
     print("Downloading PMC baselines...")
-    pmc_client._download_pmc_baselines()
+    pmc_client._download_pmc_baselines(source_dir)
     print("Downloading PMC incremental...")
-    pmc_client._download_pmc_incremental()
+    pmc_client._download_pmc_incremental(source_dir)
     print(f"Downloaded {len(list(source_dir.glob('*.tar.gz')))} files...")
     print("DONE: Download PMC data")
 

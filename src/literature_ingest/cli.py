@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union
 import click
 from cloudpathlib import CloudPath
-from literature_ingest.pipelines import parse_pmc_docs_sample
+from literature_ingest.pipelines import parse_pmc_docs_sample, pipeline_ingest_pmc
 from literature_ingest.pmc import PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
 
@@ -226,13 +226,17 @@ def pipelines():
     pass
 
 @pipelines.command()
-@click.option(
-    "--start_from_parse",
-    is_flag=True,
-    help="Show what would be downloaded without actually downloading",
-)
-def parse_sample(start_from_parse: bool):
-    parse_pmc_docs_sample(start_from_parsed=start_from_parse)
+def ingest_pmc():
+    """Ingest PMC data."""
+    click.echo("Ingesting PMC data...")
+    pipeline_ingest_pmc()
+    click.echo("DONE: Ingest PMC data")
 
-if __name__ == "__main__":
-    cli()
+
+
+@pipelines.command()
+def ingest_pmc_sample():
+    """Ingest PMC sample data."""
+    click.echo("Ingesting PMC sample data...")
+    pipeline_ingest_pmc(source_dir=Path("data/pipelines/sample_pmc/raw/"), unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/"), parsed_dir=Path("data/pipelines/sample_pmc/parsed/"))
+    click.echo("DONE: Ingest PMC sample data")
