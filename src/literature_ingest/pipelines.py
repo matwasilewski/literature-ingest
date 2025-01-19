@@ -115,7 +115,7 @@ async def pipeline_ingest_pubmed_sample(
     # Download data
     pubmed_downloader = PMCFTPClient(path_prefix=PUBMED_OPEN_ACCESS_DIR)
     print("Downloading Pubmed baselines...")
-    baseline_files_downloaded = pubmed_downloader._download_pmc_baselines_sample(raw_dir, file_names=file_names)
+    baseline_files_downloaded = pubmed_downloader._download_pubmed_baselines_sample(raw_dir, file_names=file_names)
     print(f"Downloaded {len(baseline_files_downloaded)} files...")
     print("DONE: Download Pubmed data")
 

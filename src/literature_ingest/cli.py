@@ -4,7 +4,7 @@ from typing import List, Optional, Union
 import click
 from cloudpathlib import CloudPath
 from literature_ingest.normalization import normalize_document
-from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_parse_missing_files_in_pmc
+from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_ingest_pubmed_sample, pipeline_parse_missing_files_in_pmc
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
 import asyncio
@@ -243,7 +243,7 @@ def ingest_pmc_sample(file_names: List[str]):
 @pipelines.command()
 @click.option(
     "--file-names",
-    default=['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz'],
+    default=['pubmed25n0001.xml.gz'],
     help="File names to download",
     type=str,
     multiple=True,

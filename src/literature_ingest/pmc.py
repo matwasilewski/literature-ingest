@@ -90,6 +90,26 @@ class PMCFTPClient:
 
         return baseline_dates.pop(), baseline_files
 
+    def extract_pubmed_files(self, files: List[str]) -> Tuple[str, List[str]]:
+        """Extract baseline files from PubMed directory"""
+        baseline_numbers = set()
+        baseline_files = []
+
+        for file in files:
+            # Match pattern like 'pubmed25n0001.xml.gz'
+            match = re.search(r'pubmed(\d+)n\d+\.xml\.gz', file)
+            if match:
+                baseline_numbers.add(match.group(1))
+                baseline_files.append(file)
+
+        if len(baseline_numbers) != 1:
+            raise ValueError(f"Exactly one baseline number is expected, found {len(baseline_numbers)}: {baseline_numbers}")
+
+        # Convert baseline number (e.g., "25") to a date string (e.g., "2025-01-01")
+        baseline_year = f"20{baseline_numbers.pop()}"
+
+        return baseline_year, baseline_files
+
     def extract_incremental_files(self, files: List[str]) -> List[str]:
         """Extract the date from incremental files in the current directory"""
         baseline_files = []
@@ -182,6 +202,27 @@ class PMCFTPClient:
 
         # Extract baseline date and files
         baseline_date, baseline_files = self.extract_baseline_files(raw_file_names)
+
+        # Create dated directory
+        dated_dir = base_dir / baseline_date
+        dated_dir.mkdir(parents=True, exist_ok=True)
+
+        downloaded_files = self._download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
+        return downloaded_files
+
+
+    def _download_pubmed_baselines_sample(self, base_dir: Path, file_names: List[str], dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+        if not self.ftp:
+            raise ConnectionError("Not connected to FTP server")
+
+        # Create base directory if it doesn't exist
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+        # Get list of remote files
+        raw_file_names = file_names
+
+        # Extract baseline date and files
+        baseline_date, baseline_files = self.extract_pubmed_files(raw_file_names)
 
         # Create dated directory
         dated_dir = base_dir / baseline_date

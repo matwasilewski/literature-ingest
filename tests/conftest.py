@@ -53,3 +53,7 @@ def pmc_doc_8(test_resources_root: Path) -> str:
 def pmc_doc_9(test_resources_root: Path) -> str:
     with open(test_resources_root / "PMC_test_9.xml", "r") as f:
         return f.read()
+
+@pytest.fixture
+def pubmed_sample(test_resources_root: Path) -> Path:
+    return test_resources_root / "pubmed25n0001.xml.gz"
