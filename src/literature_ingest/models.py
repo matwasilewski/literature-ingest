@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 from pydantic import BaseModel
 
 
@@ -100,8 +100,8 @@ class Section(BaseModel):
 class Document(BaseModel):
     """Represents a PMC document with enhanced metadata"""
     # Core identifiers
-    id: DocumentId
-    other_ids: Dict[str, str] = {}  # Other IDs like pmid, doi, etc.
+    ids: List[DocumentId] = []
+    ids_set: Set[str] = set()
 
     # Basic metadata
     title: str

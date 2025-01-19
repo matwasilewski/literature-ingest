@@ -39,9 +39,12 @@ def test_parse_doc_basic_fields(pmc_doc):
 
     # Test core identifiers
     assert isinstance(doc, Document)
-    assert doc.id == DocumentId(id="PMC10335194", type="pmc")
-    assert doc.other_ids["pmid"] == "37435574"
-    assert doc.other_ids["doi"] == "10.1016/j.ijcchd.2022.100354"
+    assert doc.ids == [
+        DocumentId(id="PMC10335194", type="pmc"),
+        DocumentId(id="37435574", type="pmid"),
+        DocumentId(id="10.1016/j.ijcchd.2022.100354", type="doi")
+    ]
+    assert doc.synthetic_id == "type=pmc;id=PMC10335194&type=pmid;id=37435574&type=doi;id=10.1016/j.ijcchd.2022.100354"
 
     # Test basic metadata
     assert doc.title == "Maternal and fetal outcomes in pregnant women with pulmonary hypertension: The impact of left heart disease"
@@ -340,7 +343,7 @@ def test_document_load_from_json():
     loaded_doc = Document.model_validate_json(json_str)
 
     # Verify core fields
-    assert loaded_doc.id == original_doc.id
+    assert loaded_doc.synthetic_id == original_doc.synthetic_id
     assert loaded_doc.title == original_doc.title
     assert loaded_doc.abstract == original_doc.abstract
 
