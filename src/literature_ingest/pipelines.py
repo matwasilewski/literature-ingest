@@ -1,6 +1,7 @@
 from collections import defaultdict
 from pathlib import Path
 from typing import List
+import asyncio
 
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.models import ArticleType, Document
@@ -24,7 +25,7 @@ Saving those, we can trace file lineage easily.
 
 """
 
-def pipeline_parse_missing_files_in_pmc(
+async def pipeline_parse_missing_files_in_pmc(
         unzipped_files: List[Path],
         parsed_dir: Path = Path("data/pipelines/pmc/parsed/"),
     ):
@@ -41,7 +42,7 @@ def pipeline_parse_missing_files_in_pmc(
     unzipped_files_to_parse = list(unzipped_files_to_parse.values())
 
     print(f"Parsing {len(unzipped_files_to_parse)} files, out of total available {len(unzipped_files)}...")
-    parsed_files = parser.parse_docs(unzipped_files_to_parse, parsed_dir)
+    parsed_files = await parser.parse_docs(unzipped_files_to_parse, parsed_dir)
 
     actual_parsed_files = set(parsed_files)
     failed_files = []
@@ -55,18 +56,18 @@ def pipeline_parse_missing_files_in_pmc(
     return parsed_files, failed_files
 
 
-def pipeline_parse_pmc(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
+async def pipeline_parse_pmc(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
     parser = PMCParser()
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Parsing {len(unzipped_files)} files...")
-    parsed_files = parser.parse_docs(unzipped_files, parsed_dir)
+    parsed_files = await parser.parse_docs(unzipped_files, parsed_dir)
 
     print(f"Parsed {len(parsed_files)} files...")
     parser.print_article_type_distribution()
     return parsed_files
 
-def pipeline_ingest_pmc_sample(
+async def pipeline_ingest_pmc_sample(
         raw_dir: Path = Path("data/pipelines/sample_pmc/raw/"),
         unzipped_dir: Path = Path("data/pipelines/sample_pmc/unzipped/"),
         parsed_dir: Path = Path("data/pipelines/sample_pmc/parsed/"),
@@ -93,15 +94,16 @@ def pipeline_ingest_pmc_sample(
         print(f"Unzipped {len(unzipped_files_list)} files...")
     print(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} files...")
 
+    unzipped_files_list = list(unzipped_dir.glob("*.xml"))
     print("Parsing PMC data..." )
-    parsed_files = pipeline_parse_pmc(unzipped_dir, parsed_dir)
+    parsed_files = await pipeline_parse_pmc(unzipped_files_list, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PMC data")
 
 
 
 
-def pipeline_ingest_pmc(
+async def pipeline_ingest_pmc(
         raw_dir: Path = Path("data/pipelines/pmc/raw/"),
         unzipped_dir: Path = Path("data/pipelines/pmc/unzipped/"),
         parsed_dir: Path = Path("data/pipelines/pmc/parsed/"),
@@ -132,6 +134,6 @@ def pipeline_ingest_pmc(
 
     # parse data
     print("Parsing PMC data..." )
-    parsed_files = pipeline_parse_pmc(unzipped_dir, parsed_dir)
+    parsed_files = await pipeline_parse_pmc(unzipped_dir, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PMC data")

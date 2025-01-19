@@ -7,6 +7,7 @@ from literature_ingest.normalization import normalize_document
 from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_parse_missing_files_in_pmc
 from literature_ingest.pmc import PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
+import asyncio
 
 logger = get_logger(__name__, "info")
 
@@ -70,7 +71,7 @@ def parse_doc(input_path: str, output_path: str, format: str):
 
         # Parse document
         parser = PMCParser()
-        doc = parser.parse_doc(xml_content, Path(input_path))
+        doc = asyncio.run(parser.parse_doc(xml_content, Path(input_path)))
 
         # Write output based on format
         with open(output_path, 'w') as f:
@@ -191,34 +192,14 @@ def parse_docs(input_dir: str, output_dir: str, format: str, pattern: str):
         logger.info(f"Found {len(xml_files)} files to process")
         parser = PMCParser()
 
-        # Process each file
-        for xml_file in xml_files:
-            try:
-                # Read input file
-                with open(xml_file, 'r') as f:
-                    xml_content = f.read()
+        # Process files asynchronously
+        async def process_files():
+            return await parser.parse_docs(xml_files, output_path)
 
-                # Parse document
-                doc = parser.parse_doc(xml_content, Path(xml_file))
+        # Run the async processing
+        documents = asyncio.run(process_files())
 
-                # Create output filename with appropriate extension
-                output_ext = ".json" if format == "json" else ".txt"
-                output_file = output_path / (xml_file.stem + output_ext)
-
-                # Write output
-                with open(output_file, 'w') as f:
-                    if format == "raw":
-                        f.write(doc.to_raw_text())
-                    else:
-                        f.write(doc.to_json())
-
-                logger.info(f"Processed {xml_file.name} -> {output_file.name}")
-
-            except Exception as e:
-                logger.error(f"Error processing {xml_file.name}: {str(e)}")
-                continue
-
-        click.echo(f"Successfully processed {len(xml_files)} files")
+        click.echo(f"Successfully processed {len(documents)} files")
 
     except Exception as e:
         logger.error(f"Error processing documents: {str(e)}")
@@ -233,7 +214,7 @@ def pipelines():
 def ingest_pmc():
     """Ingest PMC data."""
     click.echo("Ingesting PMC data...")
-    pipeline_ingest_pmc()
+    asyncio.run(pipeline_ingest_pmc())
     click.echo("DONE: Ingest PMC data")
 
 
@@ -248,12 +229,12 @@ def ingest_pmc():
 def ingest_pmc_sample(file_names: List[str]):
     """Ingest PMC sample data."""
     click.echo("Ingesting PMC sample data...")
-    pipeline_ingest_pmc_sample(
+    asyncio.run(pipeline_ingest_pmc_sample(
         raw_dir=Path("data/pipelines/sample_pmc/raw/"),
         unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/"),
         parsed_dir=Path("data/pipelines/sample_pmc/parsed/"),
         file_names=file_names
-    )
+    ))
     click.echo("DONE: Ingest PMC sample data")
 
 
@@ -282,7 +263,7 @@ def parse_missing_files_in_pmc(file_list: Optional[str]):
         file_list = Path(file_list).open().read().splitlines()
 
     click.echo(f"Parsing {len(file_list)} missing files in PMC...")
-    parsed_files, failed_files = pipeline_parse_missing_files_in_pmc(file_list)
+    parsed_files, failed_files = asyncio.run(pipeline_parse_missing_files_in_pmc(file_list))
     click.echo(f"DONE: Parsed {len(parsed_files)} files, failed {len(failed_files)} files")
 
     if len(failed_files) > 0:
