@@ -7,6 +7,7 @@ from literature_ingest.pmc import (
     JournalMetadata, PublicationDates
 )
 import json
+import asyncio
 
 def test_get_baseline_date_success():
     # Arrange
@@ -33,10 +34,11 @@ def test_get_baseline_date_failure(file_list):
     with pytest.raises(ValueError, match="Found a file with `baseline` string but no date"):
         client.extract_baseline_files(file_list)
 
-def test_parse_doc_basic_fields(pmc_doc):
+@pytest.mark.asyncio
+async def test_parse_doc_basic_fields(pmc_doc):
     """Test basic document field parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Test core identifiersSYT
     assert isinstance(doc, Document)
@@ -60,10 +62,11 @@ def test_parse_doc_basic_fields(pmc_doc):
     assert doc.journal.publisher == "Elsevier"
     assert doc.journal.abbreviation == "Int J Cardiol Congenit Heart Dis"
 
-def test_parse_doc_authors(pmc_doc):
+@pytest.mark.asyncio
+async def test_parse_doc_authors(pmc_doc):
     """Test author information parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Test authors list
     assert len(doc.authors) == 9
@@ -78,10 +81,11 @@ def test_parse_doc_authors(pmc_doc):
     assert "The Ohio State University Wexner Medical Center" in first_author.affiliations[0]
     assert "Nationwide Children's Hospital" in first_author.affiliations[1]
 
-def test_parse_doc_dates(pmc_doc):
+@pytest.mark.asyncio
+async def test_parse_doc_dates(pmc_doc):
     """Test publication dates parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc, Path("test.xml"))
 
     assert isinstance(doc.publication_dates, PublicationDates)
     assert doc.year == 2022
@@ -90,10 +94,11 @@ def test_parse_doc_dates(pmc_doc):
     assert doc.publication_dates.epub_date == "2022-2-24"
     assert doc.publication_dates.collection_date == "2022-6"
 
-def test_parse_doc_content(pmc_doc):
+@pytest.mark.asyncio
+async def test_parse_doc_content(pmc_doc):
     """Test document content parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Test abstract
     assert "Pulmonary hypertension (PH) due to left heart disease" in doc.abstract
@@ -106,19 +111,21 @@ def test_parse_doc_content(pmc_doc):
     # Test subject groups
     assert "Original Article" in doc.subject_groups
 
-def test_parse_doc_license(pmc_doc):
+@pytest.mark.asyncio
+async def test_parse_doc_license(pmc_doc):
     """Test license and copyright information parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc, Path("test.xml"))
 
     assert doc.license_type == "https://creativecommons.org/licenses/by-nc-nd/4.0/"
     assert "© 2022 The Authors" in doc.copyright_statement
     assert doc.copyright_year == "2022"
 
-def test_parse_doc_sections(pmc_doc):
+@pytest.mark.asyncio
+async def test_parse_doc_sections(pmc_doc):
     """Test document section parsing"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Test that sections were extracted
     assert len(doc.sections) > 0
@@ -143,10 +150,11 @@ def test_parse_doc_sections(pmc_doc):
     assert study_design.title == "Study design"
     assert "We performed a single center retrospective cohort study" in study_design.text
 
-def test_parse_doc_section_hierarchy(pmc_doc):
+@pytest.mark.asyncio
+async def test_parse_doc_section_hierarchy(pmc_doc):
     """Test that section hierarchy is correctly preserved"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Find the Methods section
     methods = next(s for s in doc.sections if s.title == "Methods")
@@ -159,10 +167,11 @@ def test_parse_doc_section_hierarchy(pmc_doc):
     assert "Outcomes studied" in subsection_titles
     assert "Statistical analysis" in subsection_titles
 
-def test_parse_doc_section_content(pmc_doc):
+@pytest.mark.asyncio
+async def test_parse_doc_section_content(pmc_doc):
     """Test that section content is correctly extracted"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Find the Discussion section
     discussion = next(s for s in doc.sections if s.title == "Discussion")
@@ -175,10 +184,11 @@ def test_parse_doc_section_content(pmc_doc):
     limitations = next(s for s in discussion.subsections if s.title == "Limitations")
     assert "We recognize this data has limitations" in limitations.text
 
-def test_document_to_raw_text(pmc_doc):
+@pytest.mark.asyncio
+async def test_document_to_raw_text(pmc_doc):
     """Test Document.to_raw_text() method"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc, Path("test.xml"))
 
     raw_text = doc.to_raw_text()
 
@@ -200,10 +210,11 @@ def test_document_to_raw_text(pmc_doc):
     assert "1. Introduction" not in raw_text
     assert "2. Methods" not in raw_text
 
-def test_document_to_json(pmc_doc):
+@pytest.mark.asyncio
+async def test_document_to_json(pmc_doc):
     """Test Document.to_json() method"""
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc, Path("test.xml"))
 
     json_str = doc.to_json()
 
@@ -237,9 +248,10 @@ def test_document_to_json(pmc_doc):
     assert json_data["publication_dates"]["received_date"] == "2021-3-23"
     assert json_data["year"] == 2022
 
-def test_doc_2(pmc_doc_2):
+@pytest.mark.asyncio
+async def test_doc_2(pmc_doc_2):
     parser = PMCParser()
-    doc = parser.parse_doc(pmc_doc_2, Path("test.xml"))
+    doc = await parser.parse_doc(pmc_doc_2, Path("test.xml"))
     assert doc
 
     assert doc.title == "Co-regulation of intragenic microRNA miR-153 and its host gene Ia-2β: identification of miR-153 target genes with functions related to IA-2β in pancreas and brain"
@@ -258,7 +270,8 @@ def test_doc_2(pmc_doc_2):
     assert doc.sections[0].title == "Introduction"
     assert doc.sections[0].text.startswith("Islet-associated protein (IA) 2 and IA-2β are major autoantigens in type 1 diabetes [1].")
 
-def test_document_to_raw_text_minimal():
+@pytest.mark.asyncio
+async def test_document_to_raw_text_minimal():
     """Test Document.to_raw_text() with minimal document"""
     doc = Document(
         ids=[DocumentId(id="TEST123", type="test")],
@@ -287,7 +300,8 @@ def test_document_to_raw_text_minimal():
     assert "Section 1" not in raw_text  # Section titles should not be included
     assert "Subsection 1.1" not in raw_text  # Subsection titles should not be included
 
-def test_document_to_json_minimal():
+@pytest.mark.asyncio
+async def test_document_to_json_minimal():
     """Test Document.to_json() with minimal document"""
     doc = Document(
         ids=[DocumentId(id="TEST123", type="test")],
@@ -307,7 +321,8 @@ def test_document_to_json_minimal():
     assert json_data["authors"] == []
     assert json_data["abstract"] is None
 
-def test_document_load_from_json():
+@pytest.mark.asyncio
+async def test_document_load_from_json():
     """Test Document.from_json() method"""
     # Create a minimal document
     original_doc = Document(
@@ -382,6 +397,7 @@ def test_document_load_from_json():
     assert loaded_doc.publication_dates.accepted_date == original_doc.publication_dates.accepted_date
     assert loaded_doc.publication_dates.epub_date == original_doc.publication_dates.epub_date
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize("pmc_doc_fixture", [
     "pmc_doc_2",
     "pmc_doc_3",
@@ -392,9 +408,9 @@ def test_document_load_from_json():
     "pmc_doc_8",
     "pmc_doc_9",
 ])
-def test_parse_doc_with_error(request, pmc_doc_fixture):
+async def test_parse_doc_with_error(request, pmc_doc_fixture):
     parser = PMCParser()
-    doc = parser.parse_doc(request.getfixturevalue(pmc_doc_fixture), Path(f"{pmc_doc_fixture}.xml"))
+    doc = await parser.parse_doc(request.getfixturevalue(pmc_doc_fixture), Path(f"{pmc_doc_fixture}.xml"))
     # Create output filename based on fixture name
     output_filename = f"{pmc_doc_fixture}.json"
     with open(f"tests/resources/json_versions/{output_filename}", "w") as f:

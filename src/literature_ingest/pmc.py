@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from click import Path
 from literature_ingest.models import PMC_ARTICLE_TYPE_MAP, ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, Section
 from pydantic import BaseModel
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
 PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR = '/pub/pmc/oa_bulk/oa_noncomm/xml'
@@ -190,6 +192,7 @@ class PMCFTPClient:
 class PMCParser:
     def __init__(self):
         self.unique_article_types = defaultdict(int)
+        self._executor = ThreadPoolExecutor()
         pass
 
     def print_article_type_distribution(self):
@@ -432,9 +435,14 @@ class PMCParser:
 
         return ids_list
 
-    def parse_doc(self, file_contents: str, file_name: Path) -> Document:
-        """Parse PMC XML document and extract relevant information"""
+    async def parse_doc(self, file_contents: str, file_name: Path) -> Document:
+        """Parse PMC XML document and extract relevant information asynchronously"""
+        # Since XML parsing is CPU-bound, we'll use a thread pool
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(self._executor, self._parse_doc_sync, file_contents, file_name)
 
+    def _parse_doc_sync(self, file_contents: str, file_name: Path) -> Document:
+        """Synchronous version of parse_doc for running in thread pool"""
         # Normalize the document
         normalized_content = normalize_document(file_contents)
 
@@ -486,7 +494,6 @@ class PMCParser:
         # Get publication year
         pub_date = article_meta.find(".//pub-date[@pub-type='collection']")
         journal = self._extract_journal_metadata(journal_meta) if journal_meta is not None else None
-
 
         # Get publication dates
         publication_dates = self._extract_dates(article_meta)
@@ -556,25 +563,37 @@ class PMCParser:
             parsed_date=datetime.now(timezone.utc)
         )
 
-    def parse_docs(self, files: List[Path], output_dir: Path) -> List[Path]:
-        """Parse a list of PMC XML files and save to output_dir"""
+    async def parse_docs(self, files: List[Path], output_dir: Path) -> List[Path]:
+        """Parse a list of PMC XML files and save to output_dir asynchronously"""
         documents = []
         counter = 0
+        tasks = []
 
-        for file in files:
+        async def process_file(file: Path) -> Optional[Path]:
+            nonlocal counter
             file_name = file.stem + '.json'
-
             try:
                 with file.open(mode='r') as f:
-                    doc = self.parse_doc(f.read(), file)
+                    doc = await self.parse_doc(f.read(), file)
                     counter += 1
                     if counter % 1000 == 0:
                         log.info(f"Parsed {counter} files")
 
-                with open(output_dir / file_name, 'w') as f:
+                output_path = output_dir / file_name
+                with open(output_path, 'w') as f:
                     f.write(doc.model_dump_json(indent=2))
-                documents.append(output_dir / file_name)
+                return output_path
             except Exception as e:
                 log.error(f"Error parsing {file.name}: {str(e)}")
-                continue
+                return None
+
+        # Create tasks for all files
+        for file in files:
+            tasks.append(process_file(file))
+
+        # Process all files concurrently
+        results = await asyncio.gather(*tasks)
+
+        # Filter out None results (failed files)
+        documents = [doc for doc in results if doc is not None]
         return documents
