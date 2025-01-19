@@ -226,10 +226,10 @@ def ingest_pmc():
     type=str,
     multiple=True,
 )
-def ingest_pmc_sample(file_names: List[str]):
+async def ingest_pmc_sample(file_names: List[str]):
     """Ingest PMC sample data."""
     click.echo("Ingesting PMC sample data...")
-    pipeline_ingest_pmc_sample(
+    await pipeline_ingest_pmc_sample(
         raw_dir=Path("data/pipelines/sample_pmc/raw/"),
         unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/"),
         parsed_dir=Path("data/pipelines/sample_pmc/parsed/"),
