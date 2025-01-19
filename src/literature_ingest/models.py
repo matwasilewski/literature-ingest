@@ -9,6 +9,7 @@ class ArticleType(str, Enum):
     RESEARCH_ARTICLE = "Research Article"
     REVIEW = "Review"
     CASE_REPORT = "Case Report"
+    CASE_STUDY = "Case Study"
     EDITORIAL = "Editorial"
     LETTER = "Letter"
     COMMENT = "Comment"
@@ -17,12 +18,17 @@ class ArticleType(str, Enum):
     OTHER = "Other"
     CORRECTION = "Correction"
     RETRACTION = "Retraction"
-
+    DATA_PAPER = "Data Paper"
+    METHODS_ARTICLE = "Methods Article"
 
 PMC_ARTICLE_TYPE_MAP = {
     "research-article": ArticleType.RESEARCH_ARTICLE,
     "review-article": ArticleType.REVIEW,
     "case-report": ArticleType.CASE_REPORT,
+    "case-study": ArticleType.CASE_STUDY,
+    "data-paper": ArticleType.DATA_PAPER,
+    "methods-article": ArticleType.METHODS_ARTICLE,
+    "systematic-review": ArticleType.SYSTEMATIC_REVIEW,
     "editorial": ArticleType.EDITORIAL,
     "letter": ArticleType.LETTER,
     "article-commentary": ArticleType.COMMENT,
