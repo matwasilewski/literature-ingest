@@ -8,7 +8,7 @@ PREREQUISITES := gcloud python3 uv gsutil
 # ensures all make targets run in one shell (rather than line by line in new shell)
 .ONESHELL:
 
-default: install full_test compose_down integration_test
+default: install full_test compose_down unit
 	echo "done!"
 
 prerequisites:
