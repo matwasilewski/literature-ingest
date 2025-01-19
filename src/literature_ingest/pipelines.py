@@ -5,6 +5,27 @@ from typing import List
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.models import ArticleType, Document
 from literature_ingest.pmc import PMCFTPClient, PMCParser
+from pydantic import BaseModel
+
+class PipelineResult(BaseModel):
+    success: bool
+    message: str
+    docs_ingested: List[Path]
+    docs_success: List[Path]
+    docs_failed: List[Path]
+    docs_skipped: List[Path]
+    docs_with_warnings: List[Path]
+
+
+# make decorator for pipeline functions
+def pipeline_function(func):
+    def wrapper(*args, **kwargs):
+        print(f"Running {func.__name__}...")
+        result = func(*args, **kwargs)
+        print(f"DONE: {func.__name__}")
+        return result
+    return wrapper
+
 
 
 def pipeline_parse_pmc(unzipped_dir: Path, parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
@@ -18,7 +39,7 @@ def pipeline_parse_pmc(unzipped_dir: Path, parsed_dir: Path = Path("data/pipelin
     print(f"Parsed {len(parsed_files)} files...")
     print(f"Unique article types: {parser.unique_article_types}")
 
-
+@pipeline_function
 def pipeline_ingest_pmc_sample(
         source_dir: Path = Path("data/pipelines/sample_pmc/raw/"),
         unzipped_dir: Path = Path("data/pipelines/sample_pmc/unzipped/"),
