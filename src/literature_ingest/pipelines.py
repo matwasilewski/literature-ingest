@@ -4,7 +4,7 @@ from typing import List
 
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.models import ArticleType, Document
-from literature_ingest.pmc import PMCParser
+from literature_ingest.pmc import PMCFTPClient, PMCParser
 
 
 def pipeline_parse_pmc(unzipped_dir: Path, parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
@@ -27,12 +27,12 @@ def pipeline_ingest_pmc(source_dir: Path = Path("data/pipelines/pmc/raw/"), unzi
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
-    pmc_client = PMCParser()
+    pmc_downloader = PMCFTPClient()
 
     print("Downloading PMC baselines...")
-    pmc_client._download_pmc_baselines(source_dir)
+    pmc_downloader._download_pmc_baselines(source_dir)
     print("Downloading PMC incremental...")
-    pmc_client._download_pmc_incremental(source_dir)
+    pmc_downloader._download_pmc_incremental(source_dir)
     print(f"Downloaded {len(list(source_dir.glob('*.tar.gz')))} files...")
     print("DONE: Download PMC data")
 
