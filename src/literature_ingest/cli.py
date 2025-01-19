@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import List, Union
 import click
 from cloudpathlib import CloudPath
+from literature_ingest.normalization import normalize_document
 from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample
 from literature_ingest.pmc import PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
@@ -56,6 +57,8 @@ def get_file(file: str, target: Path, source: str) -> None :
 def parse_doc(input_path: str, output_path: str, format: str):
     """Parse a single PMC XML document and save the output.
 
+    Normalizes the document.
+
     INPUT_PATH: Path to the input PMC XML file
     OUTPUT_PATH: Path where the parsed document should be saved
     """
@@ -64,9 +67,12 @@ def parse_doc(input_path: str, output_path: str, format: str):
         with open(input_path, 'r') as f:
             xml_content = f.read()
 
+        # Normalize the document
+        normalized_content = normalize_document(xml_content)
+
         # Parse document
         parser = PMCParser()
-        doc = parser.parse_doc(xml_content)
+        doc = parser.parse_doc(normalized_content)
 
         # Write output based on format
         with open(output_path, 'w') as f:
