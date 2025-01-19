@@ -6,9 +6,10 @@ from concurrent.futures import ThreadPoolExecutor
 import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import List
 import xml.etree.ElementTree as ET
 
-from literature_ingest.models import ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates
+from literature_ingest.models import ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, PUBMED_PUBLICATION_TYPE_MAP
 from literature_ingest.normalization import normalize_document
 from literature_ingest.utils.logging import log
 
@@ -177,39 +178,65 @@ class PubMedParser:
 
         return ids_list
 
-    async def parse_doc(self, file_contents: str, file_name: Path) -> Document:
+    def _determine_article_type(self, article_elem) -> ArticleType:
+        """Determine article type from publication types"""
+        pub_types = article_elem.find(".//PublicationTypeList")
+        if pub_types is None:
+            return ArticleType.RESEARCH_ARTICLE  # Default
+
+        # Get all publication types
+        pub_type_texts = []
+        for pub_type in pub_types.findall("PublicationType"):
+            if pub_type.text:
+                pub_type_texts.append(pub_type.text)
+
+        # Try to find a matching article type in order of priority
+        for pub_type in pub_type_texts:
+            if pub_type in PUBMED_PUBLICATION_TYPE_MAP:
+                return PUBMED_PUBLICATION_TYPE_MAP[pub_type]
+
+        return ArticleType.RESEARCH_ARTICLE  # Default if no match found
+
+    async def parse_doc(self, file_contents: str, file_name: Path) -> List[Document]:
         """Parse PubMed XML document and extract relevant information asynchronously"""
         # Since XML parsing is CPU-bound, we'll use a thread pool
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._executor, self._parse_doc_sync, file_contents, file_name)
+        return await loop.run_in_executor(self._executor, self._parse_docs_sync, file_contents, file_name)
 
-    def _parse_doc_sync(self, file_contents: str, file_name: Path) -> Document:
+    def _parse_docs_sync(self, file_contents: str, file_name: Path) -> List[Document]:
         """Synchronous version of parse_doc for running in thread pool"""
         # Normalize the document
         normalized_content = normalize_document(file_contents)
 
         root = ET.fromstring(file_contents)
-        article = root.find(".//PubmedArticle/MedlineCitation/Article")
-
-        if article is None:
+        articles = root.findall(".//PubmedArticle")
+        if articles is None:
             raise ValueError("No Article element found in PubMed XML")
 
-        # Get article type
-        article_type = ArticleType.RESEARCH_ARTICLE  # Default to research article for PubMed
+        documents = []
+        for article in articles:
+            documents.append(self._parse_article(article))
+
+        return documents
+
+    def _parse_article(self, article: ET.Element) -> Document:
+
+        # Get article type from publication types
+        article_type = self._determine_article_type(article)
 
         # Get article IDs
         ids = []
         # Add PMID
-        pmid = root.find(".//PMID")
+        pmid = article.find(".//PMID")
         if pmid is not None and pmid.text:
             ids.append(DocumentId(id=pmid.text, type="pubmed"))
 
-        # Add DOI if present
-        article_ids = root.findall(".//PubmedData/ArticleIdList/ArticleId")
+        # Add DOI and other IDs if present
+        article_ids = article.findall(".//PubmedData/ArticleIdList/ArticleId")
         for article_id in article_ids:
             id_type = article_id.get("IdType")
-            if id_type == "doi" and article_id.text:
-                ids.append(DocumentId(id=article_id.text, type="doi"))
+            if article_id.text:
+                ids.append(DocumentId(id=article_id.text, type=id_type.lower()))
 
         # Reorder IDs
         ids = self._reorder_ids(ids)
@@ -230,7 +257,7 @@ class PubMedParser:
         authors = self._extract_authors(article)
 
         # Get keywords from MeSH terms
-        medlineCitation = root.find(".//PubmedArticle/MedlineCitation")
+        medlineCitation = article.find(".//MedlineCitation")
         keywords = self._extract_keywords(medlineCitation)
 
         # Get subject groups

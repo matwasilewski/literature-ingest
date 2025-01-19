@@ -7,7 +7,8 @@ from literature_ingest.models import ArticleType, Document, DocumentId, Author, 
 async def test_parse_doc_basic_fields(pubmed_doc):
     """Test basic document field parsing"""
     parser = PubMedParser()
-    doc = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    docs = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    doc = docs[0]
 
     # Test core identifiers
     assert isinstance(doc, Document)
@@ -56,7 +57,7 @@ async def test_parse_doc_dates(pubmed_doc):
 def test_parse_doc_content(pubmed_doc):
     """Test document content parsing"""
     parser = PubMedParser()
-    doc = parser._parse_doc_sync(pubmed_doc, Path("test.xml"))
+    doc = parser._parse_docs_sync(pubmed_doc, Path("test.xml"))
 
     # Test keywords/MeSH terms
     assert "Formates" in doc.keywords
@@ -69,22 +70,21 @@ def test_parse_doc_content(pubmed_doc):
     assert "Journal Article" in doc.subject_groups
     assert "Research Support, U.S. Gov't, P.H.S." in doc.subject_groups
 
-@pytest.mark.asyncio
-async def test_parse_doc_pmid_2(pubmed_doc):
+def test_parse_doc_pmid_2(pubmed_doc):
     """Test parsing of PMID 2 article with its unique fields"""
     parser = PubMedParser()
-    doc = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    docs = parser._parse_docs_sync(pubmed_doc, Path("test.xml"))
 
     # Test core identifiers including PII
     assert doc.ids == [
         DocumentId(id="2", type="pubmed"),
-        DocumentId(id="0006-291X(75)90482-9", type="pii"),
+        DocumentId(id="0006-291x(75)90482-9", type="pii"),
         DocumentId(id="10.1016/0006-291x(75)90482-9", type="doi"),
     ]
 
     # Test basic metadata
     assert doc.title == "Delineation of the intimate details of the backbone conformation of pyridine nucleotide coenzymes in aqueous solution."
-    assert doc.type == ArticleType.RESEARCH_ARTICLE
+    assert doc.type == ArticleType.RESEARCH_ARTICLE  # Default type for Journal Article
 
     # Test journal metadata with electronic ISSN
     assert isinstance(doc.journal, JournalMetadata)
@@ -108,22 +108,21 @@ async def test_parse_doc_pmid_2(pubmed_doc):
     assert "Research Support, U.S. Gov't, Non-P.H.S." in doc.subject_groups
     assert "Research Support, U.S. Gov't, P.H.S." in doc.subject_groups
 
-@pytest.mark.asyncio
-async def test_parse_doc_pmid_3(pubmed_doc):
+def test_parse_doc_pmid_3(pubmed_doc):
     """Test parsing of PMID 3 article with its unique fields"""
     parser = PubMedParser()
-    doc = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    doc = parser._parse_docs_sync(pubmed_doc, Path("test.xml"))
 
     # Test core identifiers
     assert doc.ids == [
         DocumentId(id="3", type="pubmed"),
-        DocumentId(id="0006-291X(75)90498-2", type="pii"),
+        DocumentId(id="0006-291x(75)90498-2", type="pii"),
         DocumentId(id="10.1016/0006-291x(75)90498-2", type="doi"),
     ]
 
     # Test basic metadata
     assert doc.title == "Metal substitutions incarbonic anhydrase: a halide ion probe study."
-    assert doc.type == ArticleType.RESEARCH_ARTICLE
+    assert doc.type == ArticleType.RESEARCH_ARTICLE  # Default type for Journal Article
 
     # Test journal metadata with print ISSN
     assert isinstance(doc.journal, JournalMetadata)
@@ -147,3 +146,36 @@ async def test_parse_doc_pmid_3(pubmed_doc):
     # Test subject groups
     assert "Journal Article" in doc.subject_groups
     assert "Research Support, U.S. Gov't, P.H.S." in doc.subject_groups
+
+def test_parse_doc_pmid_30934(pubmed_doc):
+    """Test parsing of PMID 30934 article with its unique fields"""
+    parser = PubMedParser()
+    doc = parser._parse_docs_sync(pubmed_doc, Path("test.xml"))
+
+    # Test core identifiers (only PMID)
+    assert doc.ids == [
+        DocumentId(id="30934", type="pubmed"),
+    ]
+
+    # Test basic metadata
+    assert doc.title == "pH and Eh relationships in the body."
+    assert doc.type == ArticleType.RESEARCH_ARTICLE  # Default type for Journal Article
+
+    # Test journal metadata
+    assert isinstance(doc.journal, JournalMetadata)
+    assert doc.journal.title == "PDM: Physicians' drug manual"
+    assert doc.journal.issn == "0031-9058"  # Print ISSN
+    assert doc.journal.abbreviation == "PDM"
+
+    # Test authors
+    assert len(doc.authors) == 1
+    assert doc.authors[0].name == "Chapman, G H"
+
+    # Test keywords/MeSH terms specific to this article
+    assert "Acid-Base Equilibrium" in doc.keywords
+    assert "Hydrogen-Ion Concentration" in doc.keywords
+    assert "Oxidation-Reduction" in doc.keywords
+    assert "Models, Biological" in doc.keywords
+
+    # Test subject groups
+    assert "Journal Article" in doc.subject_groups

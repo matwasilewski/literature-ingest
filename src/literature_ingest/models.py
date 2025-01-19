@@ -63,6 +63,31 @@ PMC_ARTICLE_TYPE_MAP = {
     "expression-of-concern": ArticleType.OTHER,
 }
 
+PUBMED_PUBLICATION_TYPE_MAP = {
+    "Journal Article": ArticleType.RESEARCH_ARTICLE,
+    "Review": ArticleType.REVIEW,
+    "Case Reports": ArticleType.CASE_REPORT,
+    "Clinical Trial": ArticleType.CLINICAL_TRIAL,
+    "Editorial": ArticleType.EDITORIAL,
+    "Letter": ArticleType.LETTER,
+    "Comment": ArticleType.COMMENT,
+    "News": ArticleType.NEWS,
+    "Systematic Review": ArticleType.SYSTEMATIC_REVIEW,
+    "Meta-Analysis": ArticleType.SYSTEMATIC_REVIEW,
+    "Practice Guideline": ArticleType.OTHER,
+    "Guideline": ArticleType.OTHER,
+    "Retraction of Publication": ArticleType.RETRACTION,
+    "Published Erratum": ArticleType.CORRECTION,
+    "Clinical Study": ArticleType.CLINICAL_TRIAL,
+    "Observational Study": ArticleType.RESEARCH_ARTICLE,
+    "Randomized Controlled Trial": ArticleType.CLINICAL_TRIAL,
+    "Research Support, U.S. Gov't, P.H.S.": ArticleType.RESEARCH_ARTICLE,
+    "Research Support, U.S. Gov't, Non-P.H.S.": ArticleType.RESEARCH_ARTICLE,
+    "Research Support, N.I.H., Extramural": ArticleType.RESEARCH_ARTICLE,
+    "Research Support, N.I.H., Intramural": ArticleType.RESEARCH_ARTICLE,
+    "Research Support, Non-U.S. Gov't": ArticleType.RESEARCH_ARTICLE,
+}
+
 
 class DocumentId(BaseModel):
     id: str
