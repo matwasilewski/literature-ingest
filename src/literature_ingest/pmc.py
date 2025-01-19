@@ -287,14 +287,27 @@ class PMCParser:
         return PublicationDates(**dates)
 
     def _extract_publication_year(self, publication_dates: PublicationDates) -> int:
-        """Extract publication year from publication dates"""
-        earliest_year = None
-        for date_type, date_value in publication_dates.items():
-            if date_value is not None:
-                year = int(date_value.split("-")[0])
-                if earliest_year is None or year < earliest_year:
-                    earliest_year = year
-        return earliest_year
+        """Extract publication year from publication dates in priority order.
+
+        Priority order:
+        1. Collection date (final publication)
+        2. EPub date (electronic publication)
+        3. Accepted date
+        4. Received date
+        """
+        date_priority = [
+            'collection_date',
+            'epub_date',
+            'accepted_date',
+            'received_date'
+        ]
+
+        for date_type in date_priority:
+            date_value = getattr(publication_dates, date_type)
+            if date_value:
+                return int(date_value.split("-")[0])
+
+        return None
 
     def _extract_journal_metadata(self, journal_meta) -> JournalMetadata:
         """Extract journal metadata from journal-meta element"""
