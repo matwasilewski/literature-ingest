@@ -23,10 +23,9 @@ PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
 PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR = '/pub/pmc/oa_bulk/oa_noncomm/xml'
 PUBMED_OPEN_ACCESS_DIR = '/pubmed/baseline'
 
-class PMCFTPClient:
+class GenericFTPClient:
     def __init__(self):
-        self.host = PMC_FTP_HOST
-        self.pmc_open_access_noncommercial_xml_dir = PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR
+        self.host = "FILL_ME_IN"
         self.ftp = None
         self.connect()
 
@@ -41,6 +40,14 @@ class PMCFTPClient:
             print(f"Failed to connect: {str(e)}")
             raise
 
+    def close(self) -> None:
+        """Close the FTP connection"""
+        if self.ftp:
+            self.ftp.quit()
+            self.ftp = None
+            print("Connection closed")
+
+
     def list_directory(self, path: str = '.') -> List[str]:
         """List contents of the specified directory"""
         if not self.ftp:
@@ -50,6 +57,7 @@ class PMCFTPClient:
         self.ftp.dir(path, files.append)
         files = [f.split()[-1] for f in files]
         return files
+
 
     @backoff.on_exception(backoff.expo, Exception, max_time=120, max_tries=10)
     def download_file(self, remote_file: str, target_path: Path) -> None:
@@ -65,12 +73,22 @@ class PMCFTPClient:
             print(f"Failed to download {remote_file}: {str(e)}")
             raise
 
-    def close(self) -> None:
-        """Close the FTP connection"""
-        if self.ftp:
-            self.ftp.quit()
-            self.ftp = None
-            print("Connection closed")
+    def _download_files(self, files: List[str], base_dir: Path, dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+        """Download all files that don't exist locally."""
+        target_file_paths = []
+
+        for remote_file in files:
+            target_file_path = base_dir / remote_file
+            if not target_file_path.exists() or overwrite:
+                if not dry_run:
+                    print(f"Downloading {remote_file}...")
+                    self.download_file(remote_file, target_file_path)
+                else:
+                    print(f"Would download {remote_file} to {target_file_path}")
+                target_file_paths.append(target_file_path)
+            else:
+                print(f"Skipping {remote_file}")
+        return target_file_paths
 
     def extract_baseline_files(self, files: List[str]) -> Tuple[str, List[str]]:
         """Extract the date from baseline files in the current directory"""
@@ -91,6 +109,26 @@ class PMCFTPClient:
             raise ValueError(f"Exactly one baseline date is expected, found {len(baseline_dates)}: {baseline_dates}")
 
         return baseline_dates.pop(), baseline_files
+
+
+    def extract_incremental_files(self, files: List[str]) -> List[str]:
+        """Extract the date from incremental files in the current directory"""
+        baseline_files = []
+
+        for file in files:
+            if '.incr.' in file:
+                baseline_files.append(file)
+
+        return baseline_files
+
+class PMCFTPClient(GenericFTPClient):
+    def __init__(self):
+        self.host = PMC_FTP_HOST
+        self.pmc_open_access_noncommercial_xml_dir = PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR
+        self.ftp = None
+        self.connect()
+
+
 
     def extract_pubmed_files(self, files: List[str]) -> Tuple[str, List[str]]:
         """Extract baseline files from PubMed directory"""
@@ -113,32 +151,6 @@ class PMCFTPClient:
 
         return baseline_year, baseline_files
 
-    def extract_incremental_files(self, files: List[str]) -> List[str]:
-        """Extract the date from incremental files in the current directory"""
-        baseline_files = []
-
-        for file in files:
-            if '.incr.' in file:
-                baseline_files.append(file)
-
-        return baseline_files
-
-    def _download_files(self, files: List[str], base_dir: Path, dry_run: bool = False, overwrite: bool = False) -> List[Path]:
-        """Download all files that don't exist locally."""
-        target_file_paths = []
-
-        for remote_file in files:
-            target_file_path = base_dir / remote_file
-            if not target_file_path.exists() or overwrite:
-                if not dry_run:
-                    print(f"Downloading {remote_file}...")
-                    self.download_file(remote_file, target_file_path)
-                else:
-                    print(f"Would download {remote_file} to {target_file_path}")
-                target_file_paths.append(target_file_path)
-            else:
-                print(f"Skipping {remote_file}")
-        return target_file_paths
 
     @backoff.on_exception(backoff.expo, Exception, max_time=60, max_tries=5)
     def _download_pmc_incremental(self, base_dir: Path = Path('data/pmc/incremental'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
