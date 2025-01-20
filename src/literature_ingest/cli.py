@@ -5,7 +5,7 @@ import click
 from cloudpathlib import CloudPath
 from literature_ingest.normalization import normalize_document
 from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_ingest_pubmed, pipeline_ingest_pubmed_sample, pipeline_parse_missing_files_in_pmc
-from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser
+from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.utils.logging import get_logger
 import asyncio
 
@@ -21,8 +21,7 @@ def get_client(source: str):
     if source.upper() == "PMC":
         return PMCFTPClient()
     elif source.upper() == "PUBMED":
-        # TODO: Replace with PubMed downloader
-        return PMCFTPClient(path_prefix=PUBMED_OPEN_ACCESS_DIR)
+        return PubMedFTPClient()
     raise click.ClickException(f"Unknown source: {source}")
 
 @click.group()

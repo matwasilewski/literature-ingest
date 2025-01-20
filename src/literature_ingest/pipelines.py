@@ -5,7 +5,7 @@ import asyncio
 
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.models import ArticleType, Document
-from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser
+from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.pubmed import PubMedParser
 from pydantic import BaseModel
 
@@ -126,8 +126,7 @@ async def pipeline_ingest_pubmed_sample(
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
-    # TODO: Replace with PubMed downloader
-    pubmed_downloader = PMCFTPClient(path_prefix=PUBMED_OPEN_ACCESS_DIR)
+    pubmed_downloader = PubMedFTPClient()
     print("Downloading Pubmed baselines...")
     baseline_files_downloaded = pubmed_downloader._download_pubmed_baselines_sample(raw_dir, file_names=file_names)
     print(f"Downloaded {len(baseline_files_downloaded)} files...")
@@ -159,8 +158,7 @@ async def pipeline_ingest_pubmed(
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
-    # TODO: Replace with PubMed downloader
-    pubmed_downloader = PMCFTPClient(path_prefix=PUBMED_OPEN_ACCESS_DIR)
+    pubmed_downloader = PubMedFTPClient()
     print("Downloading Pubmed baselines...")
     baseline_files_downloaded = pubmed_downloader._download_pubmed_baselines(raw_dir)
     print(f"Downloaded {len(baseline_files_downloaded)} files...")
