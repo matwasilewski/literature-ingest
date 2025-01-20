@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
 import xml.etree.ElementTree as ET
+import backoff
 
 from literature_ingest.models import ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, PUBMED_PUBLICATION_TYPE_MAP
 from literature_ingest.normalization import normalize_document

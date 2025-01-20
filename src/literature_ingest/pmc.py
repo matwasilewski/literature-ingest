@@ -10,7 +10,7 @@ import re
 from cloudpathlib import CloudPath
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
-
+import backoff
 
 from click import Path
 from literature_ingest.models import PMC_ARTICLE_TYPE_MAP, ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, Section
@@ -139,6 +139,7 @@ class PMCFTPClient:
                 print(f"Skipping {remote_file}")
         return target_file_paths
 
+    @backoff.on_exception(backoff.expo, Exception, max_time=60, max_tries=5)
     def _download_pmc_incremental(self, base_dir: Path = Path('data/pmc/incremental'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
         """Download all incremental files that don't exist locally."""
         if not self.ftp:
@@ -162,6 +163,7 @@ class PMCFTPClient:
 
         return downloaded_files
 
+    @backoff.on_exception(backoff.expo, Exception, max_time=60, max_tries=5)
     def _download_pmc_baselines(self, base_dir: Path = Path('data/pmc/baselines'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
         """Download all baseline files that don't exist locally.
 
@@ -233,7 +235,7 @@ class PMCFTPClient:
         downloaded_files = self._download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
         return downloaded_files
 
-
+    @backoff.on_exception(backoff.expo, Exception, max_time=60, max_tries=5)
     def _download_pubmed_baselines(self, base_dir: Path, dry_run: bool = False, overwrite: bool = False) -> List[Path]:
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")

@@ -2,6 +2,8 @@
 #    uv pip compile requirements.in
 annotated-types==0.7.0
     # via pydantic
+backoff==2.2.1
+    # via -r requirements.in
 cachetools==5.5.0
     # via google-auth
 certifi==2024.12.14
