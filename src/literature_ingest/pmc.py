@@ -235,7 +235,7 @@ class PMCFTPClient:
         downloaded_files = self._download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
         return downloaded_files
 
-    @backoff.on_exception(backoff.expo, Exception, max_time=60, max_tries=5)
+    @backoff.on_exception(backoff.expo, Exception, max_time=120, max_tries=10)
     def _download_pubmed_baselines(self, base_dir: Path, dry_run: bool = False, overwrite: bool = False) -> List[Path]:
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
