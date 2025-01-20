@@ -200,8 +200,10 @@ async def pipeline_ingest_pubmed(
 
     # Unzip data
     if unzip_all:
+        print("Using unzip_all=True, unzipping all files...")
         # get all files from the raw directory
         files_for_unzipping = list(raw_dir.glob("*.gz"))
+        print(f"Found {len(files_for_unzipping)} files to unzip...")
     else:
         files_for_unzipping = baseline_files_downloaded
 
@@ -209,7 +211,9 @@ async def pipeline_ingest_pubmed(
 
     # Unzip data
     if parse_all:
+        print("Using parse_all=True, parsing all files...")
         files_for_parsing = list(unzipped_dir.glob("*.xml"))
+        print(f"Found {len(files_for_parsing)} files to parse...")
     else:
         files_for_parsing = unzipped_files_list
 
