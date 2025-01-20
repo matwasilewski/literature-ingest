@@ -201,26 +201,27 @@ class PubMedParser:
         """Parse PubMed XML document and extract relevant information asynchronously"""
         # Since XML parsing is CPU-bound, we'll use a thread pool
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._executor, self._parse_docs_sync, file_contents, file_name)
-
-    def _parse_docs_sync(self, file_contents: str, file_name: Path) -> List[Document]:
-        """Synchronous version of parse_doc for running in thread pool"""
         # Normalize the document
         normalized_content = normalize_document(file_contents)
-
         root = ET.fromstring(file_contents)
         articles = root.findall(".//PubmedArticle")
+
         if articles is None:
             raise ValueError("No Article element found in PubMed XML")
 
         documents = []
-        for article in articles:
-            documents.append(self._parse_article(article))
+        # Create tasks for processing each article
+        tasks = [
+            loop.run_in_executor(self._executor, self._parse_docs_sync, article)
+            for article in articles
+        ]
 
+        # Wait for all tasks to complete and collect results
+        results = await asyncio.gather(*tasks)
+        documents.extend(results)
         return documents
 
-    def _parse_article(self, article: ET.Element) -> Document:
-
+    def _parse_docs_sync(self, article: ET.Element) -> Document:
         # Get article type from publication types
         article_type = self._determine_article_type(article)
 
