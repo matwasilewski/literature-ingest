@@ -92,7 +92,7 @@ async def pipeline_ingest_pmc_sample(
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
-    pmc_downloader = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
+    pmc_downloader = PMCFTPClient()
 
     print("Downloading PMC baselines...")
     baseline_files_downloaded = pmc_downloader._download_pmc_baselines_sample(raw_dir, file_names=file_names)
@@ -126,6 +126,7 @@ async def pipeline_ingest_pubmed_sample(
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
+    # TODO: Replace with PubMed downloader
     pubmed_downloader = PMCFTPClient(path_prefix=PUBMED_OPEN_ACCESS_DIR)
     print("Downloading Pubmed baselines...")
     baseline_files_downloaded = pubmed_downloader._download_pubmed_baselines_sample(raw_dir, file_names=file_names)
@@ -158,6 +159,7 @@ async def pipeline_ingest_pubmed(
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
+    # TODO: Replace with PubMed downloader
     pubmed_downloader = PMCFTPClient(path_prefix=PUBMED_OPEN_ACCESS_DIR)
     print("Downloading Pubmed baselines...")
     baseline_files_downloaded = pubmed_downloader._download_pubmed_baselines(raw_dir)
@@ -192,7 +194,7 @@ async def pipeline_ingest_pmc(
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
-    pmc_downloader = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
+    pmc_downloader = PMCFTPClient()
 
     print("Downloading PMC baselines...")
     baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir)

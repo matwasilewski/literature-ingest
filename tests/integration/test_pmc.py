@@ -6,7 +6,7 @@ from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PMCFTPC
 
 def test_pmc_connection():
     """Test that we can successfully connect to the PMC FTP server"""
-    client = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
+    client = PMCFTPClient()
     try:
         client.connect()
         assert client.ftp is not None
@@ -21,7 +21,7 @@ def test_pmc_connection():
 
 def test_connection_error_handling():
     """Test error handling with invalid connection attempts"""
-    client = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
+    client = PMCFTPClient()
     client.host = "invalid.host.example.com"
 
     with pytest.raises(Exception):
@@ -36,7 +36,7 @@ def temp_baseline_dir(tmp_path):
 
 def test_download_baselines(temp_baseline_dir):
     """Test downloading baseline files"""
-    client = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
+    client = PMCFTPClient()
     client.connect()
     client._download_pmc_baselines(base_dir=temp_baseline_dir, dry_run=True)
     client.close()

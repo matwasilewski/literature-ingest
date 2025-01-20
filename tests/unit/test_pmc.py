@@ -11,7 +11,7 @@ import asyncio
 
 def test_get_baseline_date_success():
     # Arrange
-    client = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
+    client = PMCFTPClient()
 
     # Act
     result_date, result_files = client.extract_baseline_files([
@@ -28,7 +28,7 @@ def test_get_baseline_date_success():
 ])
 def test_get_baseline_date_failure(file_list):
     # Arrange
-    client = PMCFTPClient(path_prefix=PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR)
+    client = PMCFTPClient()
 
     # Act/Assert
     with pytest.raises(ValueError, match="Found a file with `baseline` string but no date"):

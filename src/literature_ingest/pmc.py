@@ -24,9 +24,9 @@ PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR = '/pub/pmc/oa_bulk/oa_noncomm/xml'
 PUBMED_OPEN_ACCESS_DIR = '/pubmed/baseline'
 
 class PMCFTPClient:
-    def __init__(self, path_prefix):
+    def __init__(self):
         self.host = PMC_FTP_HOST
-        self.pmc_open_access_noncommercial_xml_dir = path_prefix
+        self.pmc_open_access_noncommercial_xml_dir = PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR
         self.ftp = None
         self.connect()
 
