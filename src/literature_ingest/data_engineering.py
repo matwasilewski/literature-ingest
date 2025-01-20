@@ -72,15 +72,16 @@ def unzip_to_local(archive_file: Path, target_dir: Path, extension = ".xml") -> 
         return files
 
     # Handle .tar.gz files
-    with tarfile.open(archive_file, "r:gz") as tar:
-        for member in tar.getmembers():
-            if member.isfile() and member.name.endswith(extension):
-                # Get just the filename without the path
-                filename = Path(member.name).name
-                # Create new destination path in target directory
-                target_file_path = target_dir / filename
-                # Extract member to the target directory, renaming it
-                member.name = filename
-                tar.extract(member, target_dir)
-                files.append(target_file_path)
+    if str(archive_file).endswith('.tar.gz'):
+        with tarfile.open(archive_file, "r:gz") as tar:
+            for member in tar.getmembers():
+                if member.isfile() and member.name.endswith(extension):
+                    # Get just the filename without the path
+                    filename = Path(member.name).name
+                    # Create new destination path in target directory
+                    target_file_path = target_dir / filename
+                    # Extract member to the target directory, renaming it
+                    member.name = filename
+                    tar.extract(member, target_dir)
+                    files.append(target_file_path)
     return files
