@@ -56,11 +56,21 @@ class PubMedParser:
         # Handle PubDate in Journal/JournalIssue
         pub_date = article_elem.find(".//Journal/JournalIssue/PubDate")
         if pub_date is not None:
+            # First try standard Year/Month/Day format
             year = pub_date.find("Year")
             month = pub_date.find("Month")
             day = pub_date.find("Day")
 
-            if year is not None:
+            # If standard format not found, try MedlineDate
+            if year is None:
+                medline_date = pub_date.find("MedlineDate")
+                if medline_date is not None and medline_date.text:
+                    # MedlineDate can be in various formats, e.g. "1976 Jan-Dec"
+                    # We'll take the first year we find
+                    date_parts = medline_date.text.split()
+                    if date_parts and date_parts[0].isdigit():
+                        dates["collection_date"] = date_parts[0]
+            else:
                 date_str = f"{year.text}"
                 if month is not None:
                     # Convert month name to number if it's a name

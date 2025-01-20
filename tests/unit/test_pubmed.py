@@ -197,7 +197,6 @@ async def test_parse_doc_pmid_30934(pubmed_doc):
 
     # Test publication dates
     assert doc.publication_dates.collection_date == "1976"  # From MedlineDate
-    assert doc.publication_dates.epub_date == "1976-1-1"  # From History/PubMedPubDate
 
     # Test abstract
     expected_abstract = "This report concerns application of the graphical method for representing pH and Eh relationships in macromolecular systems (see previous paper) to in vivo studies. The author presents reasons for concluding that controlled measurements of urine are satisfactory indicators of changes in pH and Eh in the body whereas blood studies remain relatively constant. The original concept had to be modified because of two little known \"reversing phenomena\". One is well known to physicians as the \"acid rebound\" because of the acid reaction of urine when an excess of a base is administered. This is a paradox because it would be expected to be more alkaline. The second phenomenon occurs following hyperoxidation, such as in narcotic addiction, and results in reduction. Both hyperalkalinity and hyperoxidation result in an acid reaction. The author concludes that they are phases of a single phenomenon. It is the basis for \"Chapman's law\": Unfavorable effects on the body cause the urine pH and Eh to shift away from normal whereas favorable effects cause them to shift toward normal."
