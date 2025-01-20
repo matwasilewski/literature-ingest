@@ -160,8 +160,12 @@ async def pipeline_unzip_pubmed(
     print(f"Unzipping {len(files_for_unzipping)} files...")
     for file in files_for_unzipping:
         print(f"Unzipping {file}...")
-        unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
-        print(f"Unzipped {len(unzipped_files_list)} files...")
+        try:
+            unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
+            print(f"Unzipped {len(unzipped_files_list)} files...")
+        except Exception as e:
+            print(f"Error unzipping {file}: {e}")
+            continue
     print(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} XML files...")
 
     unzipped_files_list = list(unzipped_dir.glob("*.xml"))

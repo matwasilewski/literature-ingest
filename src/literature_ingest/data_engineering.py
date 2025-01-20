@@ -9,6 +9,8 @@ import time
 import subprocess
 import gzip
 
+from tenacity import retry, stop_after_attempt, wait_exponential
+
 
 def resolve_file_or_dir(target: Path, source: Path) -> Path:
     if target.is_dir():
@@ -56,6 +58,7 @@ def upload_to_cloud_with_gsutil(target_dir, local_dir, overwrite=True):
     # Return list of files in source directory
     return list(local_dir.glob("*"))
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=15))
 def unzip_to_local(archive_file: Path, target_dir: Path, extension = ".xml") -> List[Path]:
     files = []
 
