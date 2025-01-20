@@ -26,6 +26,7 @@ PUBMED_OPEN_ACCESS_DIR = '/pubmed/baseline'
 class GenericFTPClient:
     def __init__(self):
         self.host = "FILL_ME_IN"
+        self.dir = "FILL_ME_IN"
         self.ftp = None
         self.connect()
 
@@ -34,8 +35,8 @@ class GenericFTPClient:
         try:
             self.ftp = ftplib.FTP(self.host)
             self.ftp.login()  # anonymous login
-            self.ftp.cwd(self.pmc_open_access_noncommercial_xml_dir)
-            print(f"Connected to {self.host} and changed to {self.pmc_open_access_noncommercial_xml_dir}")
+            self.ftp.cwd(self.dir)
+            print(f"Connected to {self.host} and changed to {self.dir}")
         except Exception as e:
             print(f"Failed to connect: {str(e)}")
             raise
@@ -124,7 +125,7 @@ class GenericFTPClient:
 class PMCFTPClient(GenericFTPClient):
     def __init__(self):
         self.host = PMC_FTP_HOST
-        self.pmc_open_access_noncommercial_xml_dir = PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR
+        self.dir = PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR
         self.ftp = None
         self.connect()
 
@@ -210,7 +211,7 @@ class PMCFTPClient(GenericFTPClient):
 class PubMedFTPClient(GenericFTPClient):
     def __init__(self):
         self.host = PMC_FTP_HOST
-        self.pub_med_dir = PUBMED_OPEN_ACCESS_DIR
+        self.dir = PUBMED_OPEN_ACCESS_DIR
         self.ftp = None
         self.connect()
 
