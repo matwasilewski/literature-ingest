@@ -4,7 +4,7 @@ from typing import List, Optional, Union
 import click
 from cloudpathlib import CloudPath
 from literature_ingest.normalization import normalize_document
-from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_ingest_pubmed_sample, pipeline_parse_missing_files_in_pmc
+from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_ingest_pubmed, pipeline_ingest_pubmed_sample, pipeline_parse_missing_files_in_pmc
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser
 from literature_ingest.utils.logging import get_logger
 import asyncio
@@ -258,6 +258,18 @@ def ingest_pubmed_sample(file_names: List[str]):
         file_names=file_names
     ))
     click.echo("DONE: Ingest Pubmed sample data")
+
+
+@pipelines.command()
+def ingest_pubmed():
+    """Ingest Pubmed data."""
+    click.echo("Ingesting Pubmed data...")
+    asyncio.run(pipeline_ingest_pubmed(
+        raw_dir=Path("data/pipelines/pubmed/raw/"),
+        unzipped_dir=Path("data/pipelines/pubmed/unzipped/"),
+        parsed_dir=Path("data/pipelines/pubmed/parsed/"),
+    ))
+    click.echo("DONE: Ingest Pubmed data")
 
 @pipelines.command()
 @click.option(

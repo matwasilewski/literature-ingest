@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 import ftplib
+import sys
 from literature_ingest.normalization import normalize_document
 from literature_ingest.utils.logging import log
 from typing import Dict, List, Optional, Tuple
@@ -96,11 +97,12 @@ class PMCFTPClient:
         baseline_files = []
 
         for file in files:
-            # Match pattern like 'pubmed25n0001.xml.gz'
-            match = re.search(r'pubmed(\d+)n\d+\.xml\.gz', file)
-            if match:
-                baseline_numbers.add(match.group(1))
-                baseline_files.append(file)
+            # Match pattern like 'pubmed25n0001.xml.gz' but not '.gz.md5'
+            if file.endswith('.gz') and not file.endswith('.gz.md5'):
+                match = re.search(r'pubmed(\d+)n\d+\.xml\.gz$', file)
+                if match:
+                    baseline_numbers.add(match.group(1))
+                    baseline_files.append(file)
 
         if len(baseline_numbers) != 1:
             raise ValueError(f"Exactly one baseline number is expected, found {len(baseline_numbers)}: {baseline_numbers}")
@@ -220,6 +222,28 @@ class PMCFTPClient:
 
         # Get list of remote files
         raw_file_names = file_names
+
+        # Extract baseline date and files
+        baseline_date, baseline_files = self.extract_pubmed_files(raw_file_names)
+
+        # Create dated directory
+        dated_dir = base_dir / baseline_date
+        dated_dir.mkdir(parents=True, exist_ok=True)
+
+        downloaded_files = self._download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
+        return downloaded_files
+
+
+    def _download_pubmed_baselines(self, base_dir: Path, dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+        if not self.ftp:
+            raise ConnectionError("Not connected to FTP server")
+
+        # Create base directory if it doesn't exist
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+
+        # Get list of remote files
+        raw_file_names = self.list_directory()
 
         # Extract baseline date and files
         baseline_date, baseline_files = self.extract_pubmed_files(raw_file_names)

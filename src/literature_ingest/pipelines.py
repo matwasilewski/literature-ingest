@@ -6,6 +6,7 @@ import asyncio
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.models import ArticleType, Document
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser
+from literature_ingest.pubmed import PubMedParser
 from pydantic import BaseModel
 
 class PipelineResult(BaseModel):
@@ -56,8 +57,8 @@ async def pipeline_parse_missing_files_in_pmc(
     return parsed_files, failed_files
 
 
-async def pipeline_parse_pmc(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
-    parser = PMCParser()
+async def pipeline_parse_pubmed(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pubmed/parsed/")):
+    parser = PubMedParser()
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Parsing {len(unzipped_files)} files...")
@@ -96,7 +97,7 @@ async def pipeline_ingest_pmc_sample(
 
     unzipped_files_list = list(unzipped_dir.glob("*.xml"))
     print("Parsing PMC data..." )
-    parsed_files = await pipeline_parse_pmc(unzipped_files_list, parsed_dir)
+    parsed_files = await pipeline_parse_pubmed(unzipped_files_list, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PMC data")
 
@@ -129,7 +130,39 @@ async def pipeline_ingest_pubmed_sample(
 
     unzipped_files_list = list(unzipped_dir.glob("*.xml"))
     print("Parsing PMC data..." )
-    parsed_files = await pipeline_parse_pmc(unzipped_files_list, parsed_dir)
+    parsed_files = await pipeline_parse_pubmed(unzipped_files_list, parsed_dir)
+    print(f"Parsed {len(parsed_files)} files...")
+    print("DONE: Parse PMC data")
+
+
+async def pipeline_ingest_pubmed(
+        raw_dir: Path = Path("data/pipelines/pubmed/raw/"),
+        unzipped_dir: Path = Path("data/pipelines/pubmed/unzipped/"),
+        parsed_dir: Path = Path("data/pipelines/pubmed/parsed/"),
+    ):
+    # Create directories
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    unzipped_dir.mkdir(parents=True, exist_ok=True)
+    parsed_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download data
+    pubmed_downloader = PMCFTPClient(path_prefix=PUBMED_OPEN_ACCESS_DIR)
+    print("Downloading Pubmed baselines...")
+    baseline_files_downloaded = pubmed_downloader._download_pubmed_baselines(raw_dir)
+    print(f"Downloaded {len(baseline_files_downloaded)} files...")
+    print("DONE: Download Pubmed data")
+
+    # Unzip data
+    print(f"Unzipping {raw_dir}...")
+    for file in baseline_files_downloaded:
+        print(f"Unzipping {file}...")
+        unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
+        print(f"Unzipped {len(unzipped_files_list)} files...")
+    print(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} files...")
+
+    unzipped_files_list = list(unzipped_dir.glob("*.xml"))
+    print("Parsing PMC data..." )
+    parsed_files = await pipeline_parse_pubmed(unzipped_files_list, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PMC data")
 
@@ -167,6 +200,6 @@ async def pipeline_ingest_pmc(
 
     # parse data
     print("Parsing PMC data..." )
-    parsed_files = await pipeline_parse_pmc(unzipped_dir, parsed_dir)
+    parsed_files = await pipeline_parse_pubmed(unzipped_dir, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PMC data")

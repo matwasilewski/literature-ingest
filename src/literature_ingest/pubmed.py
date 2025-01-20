@@ -42,6 +42,19 @@ class PubMedParser:
             abbreviation=abbreviation
         )
 
+    def print_article_type_distribution(self):
+        total_docs = sum(self.unique_article_types.values())
+        print("Article type distribution:")
+        # Convert to list of tuples and sort by percentage (count/total) in descending order
+        sorted_types = sorted(
+            self.unique_article_types.items(),
+            key=lambda x: (x[1] / total_docs if total_docs > 0 else 0),
+            reverse=True
+        )
+        for article_type, count in sorted_types:
+            percentage = (count / total_docs * 100) if total_docs > 0 else 0
+            print(f"  {article_type}: {count} ({percentage:.1f}%)")
+
     def _extract_dates(self, article_elem) -> PublicationDates:
         """Extract publication dates from article element"""
         dates = {}
@@ -296,28 +309,22 @@ class PubMedParser:
     async def parse_docs(self, files: list[Path], output_dir: Path) -> list[Path]:
         """Parse a list of PubMed XML files and save to output_dir asynchronously"""
         documents = []
-        counter = 0
-        timestamp = datetime.now(timezone.utc)
         tasks = []
 
         async def process_file(file: Path) -> Path | None:
-            nonlocal counter
-            nonlocal timestamp
             file_name = file.stem + '.json'
             try:
                 async with self._semaphore:  # Use semaphore to limit concurrent operations
                     with file.open(mode='r') as f:
-                        doc = await self.parse_doc(f.read(), file)
-                        counter += 1
-                        if counter % 10000 == 0:
-                            elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
-                            log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
-                            timestamp = datetime.now(timezone.utc)
+                        docs = await self.parse_doc(f.read(), file)
 
-                    output_path = output_dir / file_name
-                    with open(output_path, 'w') as f:
-                        f.write(doc.model_dump_json(indent=2))
-                    return output_path
+                    output_paths = []
+                    for doc_idx, doc in enumerate(docs):
+                        output_path = output_dir / f"{file.stem}_{doc_idx}.json"
+                        with open(output_path, 'w') as f:
+                            f.write(doc.model_dump_json(indent=2))
+                        output_paths.append(output_path)
+                    return output_paths
             except Exception as e:
                 log.error(f"Error parsing {file.name}: {str(e)}")
                 return None
