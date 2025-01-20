@@ -51,6 +51,7 @@ class PMCFTPClient:
         files = [f.split()[-1] for f in files]
         return files
 
+    @backoff.on_exception(backoff.expo, Exception, max_time=120, max_tries=10)
     def download_file(self, remote_file: str, target_path: Path) -> None:
         """Download a file from REMOTE_FILE to TARGET_PATH, from PMC FTP server defined in __init__"""
         if not self.ftp:
