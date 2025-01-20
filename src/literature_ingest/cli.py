@@ -261,13 +261,25 @@ def ingest_pubmed_sample(file_names: List[str]):
 
 
 @pipelines.command()
-def ingest_pubmed():
+@click.option(
+    "--unzip-all",
+    is_flag=True,
+    help="Unzip all files",
+)
+@click.option(
+    "--parse-all",
+    is_flag=True,
+    help="Parse all files",
+)
+def ingest_pubmed(unzip_all: bool, parse_all: bool):
     """Ingest Pubmed data."""
     click.echo("Ingesting Pubmed data...")
     asyncio.run(pipeline_ingest_pubmed(
         raw_dir=Path("data/pipelines/pubmed/raw/"),
         unzipped_dir=Path("data/pipelines/pubmed/unzipped/"),
         parsed_dir=Path("data/pipelines/pubmed/parsed/"),
+        unzip_all=unzip_all,
+        parse_all=parse_all,
     ))
     click.echo("DONE: Ingest Pubmed data")
 
