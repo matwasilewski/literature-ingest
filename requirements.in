@@ -7,3 +7,4 @@ tomlkit
 pydantic_settings
 pytest-asyncio
 backoff
+tenacity

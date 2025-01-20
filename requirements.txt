@@ -78,6 +78,8 @@ requests==2.32.3
     #   google-cloud-storage
 rsa==4.9
     # via google-auth
+tenacity==9.0.0
+    # via -r requirements.in
 tomlkit==0.13.2
     # via -r requirements.in
 typing-extensions==4.12.2
