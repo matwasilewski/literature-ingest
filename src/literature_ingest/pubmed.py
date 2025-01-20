@@ -258,6 +258,10 @@ class PubMedParser:
         # Get authors
         authors = self._extract_authors(article)
 
+        # Get abstract
+        abstract_elem = medline_citation.find(".//Abstract/AbstractText")
+        abstract = abstract_elem.text if abstract_elem is not None else None
+
         # Get keywords from MeSH terms
         medlineCitation = article.find(".//MedlineCitation")
         keywords = self._extract_keywords(medlineCitation)
@@ -272,6 +276,7 @@ class PubMedParser:
             journal=journal_metadata,
             year=publication_year,
             publication_dates=publication_dates,
+            abstract=abstract,
             keywords=keywords,
             authors=authors,
             subject_groups=subject_groups,

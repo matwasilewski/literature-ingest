@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 from literature_ingest.pubmed import PubMedParser
 from literature_ingest.models import ArticleType, Document, DocumentId, Author, JournalMetadata, PublicationDates
+from datetime import datetime, timezone
 
 @pytest.mark.asyncio
 async def test_parse_doc_basic_fields(pubmed_doc):
@@ -177,10 +178,12 @@ async def test_parse_doc_pmid_30934(pubmed_doc):
     assert doc.ids == [
         DocumentId(id="30934", type="pubmed"),
     ]
+    assert doc.synthetic_id == "type=pubmed;id=30934"
 
     # Test basic metadata
     assert doc.title == "pH and Eh relationships in the body."
     assert doc.type == ArticleType.RESEARCH_ARTICLE  # Default type for Journal Article
+    assert doc.year == 1976  # From PubDate MedlineDate
 
     # Test journal metadata
     assert isinstance(doc.journal, JournalMetadata)
@@ -192,11 +195,26 @@ async def test_parse_doc_pmid_30934(pubmed_doc):
     assert len(doc.authors) == 1
     assert doc.authors[0].name == "Chapman, G H"
 
-    # Test keywords/MeSH terms specific to this article
+    # Test publication dates
+    assert doc.publication_dates.collection_date == "1976"  # From MedlineDate
+    assert doc.publication_dates.epub_date == "1976-1-1"  # From History/PubMedPubDate
+
+    # Test abstract
+    expected_abstract = "This report concerns application of the graphical method for representing pH and Eh relationships in macromolecular systems (see previous paper) to in vivo studies. The author presents reasons for concluding that controlled measurements of urine are satisfactory indicators of changes in pH and Eh in the body whereas blood studies remain relatively constant. The original concept had to be modified because of two little known \"reversing phenomena\". One is well known to physicians as the \"acid rebound\" because of the acid reaction of urine when an excess of a base is administered. This is a paradox because it would be expected to be more alkaline. The second phenomenon occurs following hyperoxidation, such as in narcotic addiction, and results in reduction. Both hyperalkalinity and hyperoxidation result in an acid reaction. The author concludes that they are phases of a single phenomenon. It is the basis for \"Chapman's law\": Unfavorable effects on the body cause the urine pH and Eh to shift away from normal whereas favorable effects cause them to shift toward normal."
+    assert doc.abstract == expected_abstract
+
+    # Test keywords/MeSH terms
+    assert len(doc.keywords) == 5
     assert "Acid-Base Equilibrium" in doc.keywords
+    assert "Humans" in doc.keywords
     assert "Hydrogen-Ion Concentration" in doc.keywords
-    assert "Oxidation-Reduction" in doc.keywords
     assert "Models, Biological" in doc.keywords
+    assert "Oxidation-Reduction" in doc.keywords
 
     # Test subject groups
+    assert len(doc.subject_groups) == 1
     assert "Journal Article" in doc.subject_groups
+
+    # Test parsed_date is present and is a datetime
+    assert isinstance(doc.parsed_date, datetime)
+    assert doc.parsed_date.tzinfo == timezone.utc  # Verify timezone is UTC
