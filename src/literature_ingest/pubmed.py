@@ -159,8 +159,8 @@ class PubMedParser:
         return subject_groups
 
     def _reorder_ids(self, ids: list[DocumentId]) -> list[DocumentId]:
-        """Reorder the IDs by type (pubmed, doi, *)"""
-        explicit_id_types_order = ["pubmed", "doi"]
+        """Reorder the IDs by type (pubmed, pii, doi, *)"""
+        explicit_id_types_order = ["pubmed", "pii", "doi"]
         ids_list = []
         id2type2id = {}
 
@@ -224,6 +224,7 @@ class PubMedParser:
     def _parse_docs_sync(self, article: ET.Element) -> Document:
         # Get article type from publication types
         article_type = self._determine_article_type(article)
+        medline_citation = article.find(".//MedlineCitation")
 
         # Get article IDs
         ids = []
@@ -243,11 +244,11 @@ class PubMedParser:
         ids = self._reorder_ids(ids)
 
         # Get title
-        title_elem = article.find(".//ArticleTitle")
+        title_elem = medline_citation.find(".//ArticleTitle")
         title = title_elem.text if title_elem is not None else "Untitled Article"
 
         # Get journal metadata
-        journal = article.find("Journal")
+        journal = medline_citation.find(".//Journal")
         journal_metadata = self._extract_journal_metadata(journal) if journal is not None else None
 
         # Get publication dates
