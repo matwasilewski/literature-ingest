@@ -276,7 +276,7 @@ class PubMedFTPClient(GenericFTPClient):
         dated_dir.mkdir(parents=True, exist_ok=True)
 
         downloaded_files = self._download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
-        return downloaded_files
+        return downloaded_files, baseline_date
 
 class PMCParser:
     def __init__(self):

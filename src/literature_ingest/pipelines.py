@@ -145,10 +145,10 @@ async def pipeline_download_pubmed(
     # Download data
     pubmed_downloader = PubMedFTPClient()
     print("Downloading Pubmed baselines...")
-    baseline_files_downloaded = pubmed_downloader._download_pubmed_baselines(raw_dir)
+    baseline_files_downloaded, baseline_date = pubmed_downloader._download_pubmed_baselines(raw_dir)
     print(f"Downloaded {len(baseline_files_downloaded)} files...")
     print("DONE: Download Pubmed data")
-    return baseline_files_downloaded
+    return baseline_files_downloaded, baseline_date
 
 async def pipeline_unzip_pubmed(
         files_for_unzipping: List[Path],
@@ -196,13 +196,15 @@ async def pipeline_ingest_pubmed(
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
-    baseline_files_downloaded = await pipeline_download_pubmed(raw_dir)
+    baseline_files_downloaded, baseline_date = await pipeline_download_pubmed(raw_dir)
+
+    dated_raw_dir = raw_dir / baseline_date
 
     # Unzip data
     if unzip_all:
         print("Using unzip_all=True, unzipping all files...")
         # get all files from the raw directory
-        files_for_unzipping = list(raw_dir.glob("*.gz"))
+        files_for_unzipping = list(dated_raw_dir.glob("*.gz"))
         print(f"Found {len(files_for_unzipping)} files to unzip...")
     else:
         files_for_unzipping = baseline_files_downloaded
