@@ -131,7 +131,9 @@ class Section(BaseModel):
     label: Optional[str] = None  # section number/label if present
     title: Optional[str] = None
     text: str
-    subsections: List['Section'] = []  # recursive for nested sections
+
+    class Config:
+        extra = "forbid"
 
 
 class Document(BaseModel):
