@@ -81,27 +81,6 @@ def pipeline_download_pubmed(
     print("DONE: Download Pubmed data")
     return baseline_files_downloaded, baseline_date
 
-def pipeline_unzip_pubmed(
-        files_for_unzipping: List[Path],
-        unzipped_dir: Path = Path("data/pipelines/pubmed/unzipped/"),
-    ):
-    # Create directories
-    unzipped_dir.mkdir(parents=True, exist_ok=True)
-
-    print(f"Unzipping {len(files_for_unzipping)} files...")
-    for file in files_for_unzipping:
-        print(f"Unzipping {file}...")
-        try:
-            unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
-            print(f"Unzipped {len(unzipped_files_list)} files...")
-        except Exception as e:
-            print(f"Error unzipping {file}: {e}")
-            continue
-    print(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} XML files...")
-
-    unzipped_files_list = list(unzipped_dir.glob("*.xml"))
-    return unzipped_files_list
-
 
 def pipeline_parse_pubmed(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pubmed/parsed/")):
     print("Parsing PubMed data..." )
@@ -116,42 +95,3 @@ def pipeline_parse_pubmed(unzipped_files: List[Path], parsed_dir: Path = Path("d
     print("DONE: Parse PubMed data")
     parser.print_article_type_distribution()
     return parsed_files
-
-
-def pipeline_ingest_pubmed(
-        raw_dir: Path = Path("data/pipelines/pubmed/raw/"),
-        unzipped_dir: Path = Path("data/pipelines/pubmed/unzipped/"),
-        parsed_dir: Path = Path("data/pipelines/pubmed/parsed/"),
-        unzip_all: bool = False,
-        parse_all: bool = False,
-    ):
-    # Create directories
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    unzipped_dir.mkdir(parents=True, exist_ok=True)
-    parsed_dir.mkdir(parents=True, exist_ok=True)
-
-    # Download data
-    baseline_files_downloaded, baseline_date = pipeline_download_pubmed(raw_dir)
-
-    dated_raw_dir = raw_dir / baseline_date
-
-    # Unzip data
-    if unzip_all:
-        print("Using unzip_all=True, unzipping all files...")
-        # get all files from the raw directory
-        files_for_unzipping = list(dated_raw_dir.glob("*.gz"))
-        print(f"Found {len(files_for_unzipping)} files to unzip...")
-    else:
-        files_for_unzipping = baseline_files_downloaded
-
-    unzipped_files_list = pipeline_unzip_pubmed(files_for_unzipping, unzipped_dir)
-
-    # Unzip data
-    if parse_all:
-        print("Using parse_all=True, parsing all files...")
-        files_for_parsing = list(unzipped_dir.glob("*.xml"))
-        print(f"Found {len(files_for_parsing)} files to parse...")
-    else:
-        files_for_parsing = unzipped_files_list
-
-    parsed_files = pipeline_parse_pubmed(files_for_parsing, parsed_dir)
