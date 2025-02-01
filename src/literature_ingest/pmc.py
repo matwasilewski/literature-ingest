@@ -464,7 +464,7 @@ class PMCParser:
         return " ".join(texts)
 
     def _extract_sections(self, body_elem, parent_section=None) -> List[Section]:
-        """Recursively extract sections from the document body"""
+        """Extract sections from the document body, incorporating subsection content into parent sections"""
         sections = []
 
         # If we're parsing the body element itself, look for direct sec elements
@@ -488,20 +488,22 @@ class PMCParser:
             if text is None:
                 continue
 
+            # Process direct subsections and add their content to the parent section's text
+            for subsec in sec.findall("./sec"):
+                subsec_title = subsec.find("title")
+                subsec_title_text = subsec_title.text if subsec_title is not None else "Untitled Subsection"
+                subsec_text = self._extract_section_text(subsec)
 
-            # Create section object
+                if subsec_text:
+                    text += f"\n\n{subsec_title_text}\n{subsec_text}"
+
+            # Create section object (note: removed subsections field)
             section = Section(
                 id=section_id,
                 label=label,
                 title=title,
-                text=text,
-                subsections=[]
+                text=text
             )
-
-            # Recursively process subsections
-            subsections = self._extract_sections(sec, parent_section=section)
-            if subsections:
-                section.subsections = subsections
 
             sections.append(section)
 

@@ -136,13 +136,10 @@ def test_parse_doc_sections(pmc_doc):
     assert methods.label == "2"
     assert methods.title == "Methods"
     assert methods.id == "sec2"
-    assert len(methods.subsections) > 0
 
-    # Test first methods subsection
-    study_design = methods.subsections[0]
-    assert study_design.label == "2.1"
-    assert study_design.title == "Study design"
-    assert "We performed a single center retrospective cohort study" in study_design.text
+    assert "Patient identification, classification and data collection" in methods.text
+    assert "Study design" in methods.text
+    assert "We performed a single center retrospective cohort study" in methods.text
 
 def test_parse_doc_section_hierarchy(pmc_doc):
     """Test that section hierarchy is correctly preserved"""
