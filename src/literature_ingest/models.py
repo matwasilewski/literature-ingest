@@ -203,7 +203,7 @@ class Document(BaseModel):
             return " ".join(section_text)
 
         for section in self.sections:
-            section_text = process_section(section)
+            section_text = section.title + "\n" + section.text
             if section_text.strip():
                 components.append(section_text)
 

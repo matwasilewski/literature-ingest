@@ -150,12 +150,10 @@ def test_parse_doc_section_hierarchy(pmc_doc):
     methods = next(s for s in doc.sections if s.title == "Methods")
 
     # Test subsection structure
-    assert len(methods.subsections) == 4  # Methods has 4 subsections
-    subsection_titles = [s.title for s in methods.subsections]
-    assert "Study design" in subsection_titles
-    assert "Patient identification, classification and data collection" in subsection_titles
-    assert "Outcomes studied" in subsection_titles
-    assert "Statistical analysis" in subsection_titles
+    assert "Study design" in methods.text
+    assert "Patient identification, classification and data collection" in methods.text
+    assert "Outcomes studied" in methods.text
+    assert "Statistical analysis" in methods.text
 
 def test_parse_doc_section_content(pmc_doc):
     """Test that section content is correctly extracted"""
@@ -170,8 +168,7 @@ def test_parse_doc_section_content(pmc_doc):
     assert "In this large cohort of pregnant women with PH" in discussion.text
 
     # Test that subsection content is preserved
-    limitations = next(s for s in discussion.subsections if s.title == "Limitations")
-    assert "We recognize this data has limitations" in limitations.text
+    assert "We recognize this data has limitations" in discussion.text
 
 def test_document_to_raw_text(pmc_doc):
     """Test Document.to_raw_text() method"""
@@ -265,13 +262,7 @@ def test_document_to_raw_text_minimal():
         sections=[
             Section(
                 title="Section 1",
-                text="Main text",
-                subsections=[
-                    Section(
-                        title="Subsection 1.1",
-                        text="Subsection text"
-                    )
-                ]
+                text="Main text\n\nSubsection 1.1\nSubsection text",
             )
         ]
     )
@@ -281,9 +272,8 @@ def test_document_to_raw_text_minimal():
 
     assert lines[0] == "Test Title"
     assert lines[1] == "Test abstract"
-    assert "Main text Subsection text" in lines[2]  # Section texts should be combined
-    assert "Section 1" not in raw_text  # Section titles should not be included
-    assert "Subsection 1.1" not in raw_text  # Subsection titles should not be included
+    assert lines[2] == "Section 1\nMain text"
+    assert lines[3] == "Subsection 1.1\nSubsection text"
 
 def test_document_to_json_minimal():
     """Test Document.to_json() with minimal document"""
@@ -345,7 +335,6 @@ def test_document_load_from_json():
                 label="1",
                 title="Introduction",
                 text="Test introduction text",
-                subsections=[]
             )
         ],
         license_type="CC-BY-4.0",
