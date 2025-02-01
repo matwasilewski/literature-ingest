@@ -67,41 +67,6 @@ def pipeline_parse_pmc(unzipped_files: List[Path], parsed_dir: Path = Path("data
     parser.print_article_type_distribution()
     return parsed_files
 
-
-def pipeline_ingest_pmc_sample(
-        raw_dir: Path = Path("data/pipelines/sample_pmc/raw/"),
-        unzipped_dir: Path = Path("data/pipelines/sample_pmc/unzipped/"),
-        parsed_dir: Path = Path("data/pipelines/sample_pmc/parsed/"),
-        file_names: List[str] = ['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz']
-    ):
-    # Create directories
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    unzipped_dir.mkdir(parents=True, exist_ok=True)
-    parsed_dir.mkdir(parents=True, exist_ok=True)
-
-    # Download data
-    pmc_downloader = PMCFTPClient()
-
-    print("Downloading PMC baselines...")
-    baseline_files_downloaded = pmc_downloader._download_pmc_baselines_sample(raw_dir, file_names=file_names)
-    print(f"Downloaded {len(baseline_files_downloaded)} files...")
-    print("DONE: Download PMC data")
-
-    # Unzip data
-    print(f"Unzipping {raw_dir}...")
-    for file in baseline_files_downloaded:
-        print(f"Unzipping {file}...")
-        unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
-        print(f"Unzipped {len(unzipped_files_list)} files...")
-    print(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} files...")
-
-    unzipped_files_list = list(unzipped_dir.glob("*.xml"))
-    print("Parsing PMC data..." )
-    parsed_files = pipeline_parse_pubmed(unzipped_files_list, parsed_dir)
-    print(f"Parsed {len(parsed_files)} files...")
-    print("DONE: Parse PMC data")
-
-
 def pipeline_download_pubmed(
         raw_dir: Path = Path("data/pipelines/pubmed/raw/"),
     ) -> List[Path]:

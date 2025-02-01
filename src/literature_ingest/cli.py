@@ -4,7 +4,7 @@ from typing import List, Optional, Union
 import click
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.normalization import normalize_document
-from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_ingest_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pubmed
+from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_ingest_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pmc, pipeline_parse_pubmed
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.utils.logging import get_logger
 
@@ -217,12 +217,38 @@ def ingest_pmc():
 def ingest_pmc_sample(file_names: List[str]):
     """Ingest PMC sample data."""
     click.echo("Ingesting PMC sample data...")
-    pipeline_ingest_pmc_sample(
-        raw_dir=Path("data/pipelines/sample_pmc/raw/"),
-        unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/"),
-        parsed_dir=Path("data/pipelines/sample_pmc/parsed/"),
-        file_names=file_names
-    )
+    raw_dir=Path("data/pipelines/sample_pmc/raw/")
+    unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/")
+    parsed_dir=Path("data/pipelines/sample_pmc/parsed/")
+
+    # Create directories
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    unzipped_dir.mkdir(parents=True, exist_ok=True)
+    parsed_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download data
+    pmc_downloader = PMCFTPClient()
+
+    click.echo("Downloading PMC baselines...")
+    baseline_files_downloaded = pmc_downloader._download_pmc_baselines_sample(raw_dir, file_names=file_names)
+    click.echo(f"Downloaded {len(baseline_files_downloaded)} files...")
+    click.echo("DONE: Download PMC data")
+
+    # Unzip data
+    click.echo(f"Unzipping {raw_dir}...")
+    for file in baseline_files_downloaded:
+        click.echo(f"Unzipping {file}...")
+        unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
+        click.echo(f"Unzipped {len(unzipped_files_list)} files...")
+    click.echo(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} files...")
+
+    # Parse data
+    unzipped_files_list = list(unzipped_dir.glob("*.xml"))
+    click.echo("Parsing PMC data..." )
+    parsed_files = pipeline_parse_pmc(unzipped_files_list, parsed_dir)
+    click.echo(f"Parsed {len(parsed_files)} files...")
+    click.echo("DONE: Parse PMC data")
+
     click.echo("DONE: Ingest PMC sample data")
 
 
