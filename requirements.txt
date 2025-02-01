@@ -4,9 +4,9 @@ annotated-types==0.7.0
     # via pydantic
 backoff==2.2.1
     # via -r requirements.in
-cachetools==5.5.0
+cachetools==5.5.1
     # via google-auth
-certifi==2024.12.14
+certifi==2025.1.31
     # via requests
 charset-normalizer==3.4.1
     # via requests
@@ -14,18 +14,18 @@ click==8.1.8
     # via -r requirements.in
 cloudpathlib==0.20.0
     # via -r requirements.in
-google-api-core==2.24.0
+google-api-core==2.24.1
     # via
     #   google-cloud-core
     #   google-cloud-storage
-google-auth==2.37.0
+google-auth==2.38.0
     # via
     #   google-api-core
     #   google-cloud-core
     #   google-cloud-storage
 google-cloud-core==2.4.1
     # via google-cloud-storage
-google-cloud-storage==2.19.0
+google-cloud-storage==3.0.0
     # via cloudpathlib
 google-crc32c==1.6.0
     # via
@@ -45,7 +45,7 @@ packaging==24.2
     # via pytest
 pluggy==1.5.0
     # via pytest
-proto-plus==1.25.0
+proto-plus==1.26.0
     # via google-api-core
 protobuf==5.29.3
     # via
@@ -58,17 +58,13 @@ pyasn1==0.6.1
     #   rsa
 pyasn1-modules==0.4.1
     # via google-auth
-pydantic==2.10.5
+pydantic==2.10.6
     # via pydantic-settings
 pydantic-core==2.27.2
     # via pydantic
 pydantic-settings==2.7.1
     # via -r requirements.in
 pytest==8.3.4
-    # via
-    #   -r requirements.in
-    #   pytest-asyncio
-pytest-asyncio==0.25.2
     # via -r requirements.in
 python-dotenv==1.0.1
     # via pydantic-settings
