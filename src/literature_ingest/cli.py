@@ -4,7 +4,7 @@ from typing import List, Optional, Union
 import click
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.normalization import normalize_document
-from literature_ingest.pipelines import pipeline_ingest_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pmc, pipeline_parse_pubmed
+from literature_ingest.pipelines import pipeline_download_pubmed, pipeline_ingest_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pmc, pipeline_parse_pubmed, pipeline_unzip_pubmed
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.utils.logging import get_logger
 
@@ -350,13 +350,42 @@ def ingest_pubmed_sample(file_names: List[str]):
 def ingest_pubmed(unzip_all: bool, parse_all: bool):
     """Ingest Pubmed data."""
     click.echo("Ingesting Pubmed data...")
-    pipeline_ingest_pubmed(
-        raw_dir=Path("data/pipelines/pubmed/raw/"),
-        unzipped_dir=Path("data/pipelines/pubmed/unzipped/"),
-        parsed_dir=Path("data/pipelines/pubmed/parsed/"),
-        unzip_all=unzip_all,
-        parse_all=parse_all,
-    )
+
+    raw_dir= Path("data/pipelines/pubmed/raw/")
+    unzipped_dir = Path("data/pipelines/pubmed/unzipped/")
+    parsed_dir = Path("data/pipelines/pubmed/parsed/")
+
+    # Create directories
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    unzipped_dir.mkdir(parents=True, exist_ok=True)
+    parsed_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download data
+    baseline_files_downloaded, baseline_date = pipeline_download_pubmed(raw_dir)
+
+    dated_raw_dir = raw_dir / baseline_date
+
+    # Unzip data
+    if unzip_all:
+        print("Using unzip_all=True, unzipping all files...")
+        # get all files from the raw directory
+        files_for_unzipping = list(dated_raw_dir.glob("*.gz"))
+        print(f"Found {len(files_for_unzipping)} files to unzip...")
+    else:
+        files_for_unzipping = baseline_files_downloaded
+
+    unzipped_files_list = pipeline_unzip_pubmed(files_for_unzipping, unzipped_dir)
+
+    # Unzip data
+    if parse_all:
+        print("Using parse_all=True, parsing all files...")
+        files_for_parsing = list(unzipped_dir.glob("*.xml"))
+        print(f"Found {len(files_for_parsing)} files to parse...")
+    else:
+        files_for_parsing = unzipped_files_list
+
+    parsed_files = pipeline_parse_pubmed(files_for_parsing, parsed_dir)
+
     click.echo("DONE: Ingest Pubmed data")
 
 @pipelines.command()
