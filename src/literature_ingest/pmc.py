@@ -7,7 +7,6 @@ from literature_ingest.normalization import normalize_document
 from literature_ingest.utils.logging import log
 from typing import Dict, List, Optional, Tuple
 import re
-from cloudpathlib import CloudPath
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 import backoff

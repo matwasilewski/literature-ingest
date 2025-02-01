@@ -2,7 +2,6 @@ import datetime
 from pathlib import Path
 from typing import List, Optional, Union
 import click
-from cloudpathlib import CloudPath
 from literature_ingest.normalization import normalize_document
 from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_ingest_pubmed, pipeline_ingest_pubmed_sample, pipeline_parse_missing_files_in_pmc
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
@@ -11,10 +10,6 @@ import asyncio
 
 logger = get_logger(__name__, "info")
 
-def convert_to_cloudpath(path: Path) -> Union[CloudPath, Path]:
-    if str(path).startswith(("s3://", "gs://", "az://")):
-        return CloudPath(str(path))
-    return path
 
 def get_client(source: str):
     """Get the appropriate client based on source."""
@@ -40,7 +35,6 @@ def cli():
 )
 def get_file(file: str, target: Path, source: str) -> None :
     """Download a file from the specified source."""
-    target = convert_to_cloudpath(target)
     if target.is_dir():
         target = target / file
     client = get_client(source)
@@ -107,8 +101,6 @@ def parse_doc(input_path: str, output_path: str, format: str):
 )
 def download_pmc_baselines(dry_run: bool, base_dir: Path, overwrite: bool):
     """Download baseline files from the PMC FTP server."""
-    base_dir = convert_to_cloudpath(base_dir)
-
     client = get_client("PMC")
     try:
         logger.info(f"Connecting to PMC FTP server...")
@@ -142,8 +134,6 @@ def download_pmc_baselines(dry_run: bool, base_dir: Path, overwrite: bool):
 )
 def download_pmc_incremental(dry_run: bool, base_dir: Path, overwrite: bool):
     """Download incremental files from the PMC FTP server."""
-    base_dir = convert_to_cloudpath(base_dir)
-
     client = get_client("PMC")
     try:
         logger.info(f"Connecting to PMC FTP server...")
