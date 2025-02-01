@@ -183,12 +183,8 @@ def parse_docs(input_dir: str, output_dir: str, format: str, pattern: str):
         logger.info(f"Found {len(xml_files)} files to process")
         parser = PMCParser()
 
-        # Process files asynchronously
-        async def process_files():
-            return await parser.parse_docs(xml_files, output_path)
-
         # Run the async processing
-        documents = process_files()
+        documents = parser.parse_docs(xml_files, output_path)
 
         click.echo(f"Successfully processed {len(documents)} files")
 
