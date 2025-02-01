@@ -15,8 +15,6 @@ import backoff
 from click import Path
 from literature_ingest.models import PMC_ARTICLE_TYPE_MAP, ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, Section
 from pydantic import BaseModel
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import multiprocessing
 
 PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
@@ -283,10 +281,6 @@ class PMCParser:
         self.unique_article_types = defaultdict(int)
         # Use number of CPU cores for ThreadPoolExecutor
         self._cpu_count = multiprocessing.cpu_count()
-        self._executor = ThreadPoolExecutor(max_workers=self._cpu_count)
-        # Match semaphore to CPU count to avoid oversubscription
-        self._semaphore = asyncio.Semaphore(self._cpu_count)
-        pass
 
     def print_article_type_distribution(self):
         total_docs = sum(self.unique_article_types.values())
@@ -534,14 +528,8 @@ class PMCParser:
 
         return ids_list
 
-    async def parse_doc(self, file_contents: str, file_name: Path) -> Document:
-        """Parse PMC XML document and extract relevant information asynchronously"""
-        # Since XML parsing is CPU-bound, we'll use a thread pool
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._executor, self._parse_doc_sync, file_contents, file_name)
-
-    def _parse_doc_sync(self, file_contents: str, file_name: Path) -> Document:
-        """Synchronous version of parse_doc for running in thread pool"""
+    def parse_doc(self, file_contents: str, file_name: Path) -> Document:
+        """Parse PMC XML document and extract relevant information"""
         # Normalize the document
         normalized_content = normalize_document(file_contents)
 
@@ -662,42 +650,28 @@ class PMCParser:
             parsed_date=datetime.now(timezone.utc)
         )
 
-    async def parse_docs(self, files: List[Path], output_dir: Path) -> List[Path]:
-        """Parse a list of PMC XML files and save to output_dir asynchronously"""
+    def parse_docs(self, files: List[Path], output_dir: Path) -> List[Path]:
+        """Parse a list of PMC XML files and save to output_dir"""
         documents = []
         counter = 0
         timestamp = datetime.now(timezone.utc)
-        tasks = []
 
-        async def process_file(file: Path) -> Optional[Path]:
-            nonlocal counter
-            nonlocal timestamp
+        for file in files:
             file_name = file.stem + '.json'
             try:
-                async with self._semaphore:  # Use semaphore to limit concurrent operations
-                    with file.open(mode='r') as f:
-                        doc = await self.parse_doc(f.read(), file)
-                        counter += 1
-                        if counter % 10000 == 0:
-                            elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
-                            log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
-                            timestamp = datetime.now(timezone.utc)
+                with file.open(mode='r') as f:
+                    doc = self.parse_doc(f.read(), file)
+                    counter += 1
+                    if counter % 10000 == 0:
+                        elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
+                        log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
+                        timestamp = datetime.now(timezone.utc)
 
-                    output_path = output_dir / file_name
-                    with open(output_path, 'w') as f:
-                        f.write(doc.model_dump_json(indent=2))
-                    return output_path
+                output_path = output_dir / file_name
+                with open(output_path, 'w') as f:
+                    f.write(doc.model_dump_json(indent=2))
+                documents.append(output_path)
             except Exception as e:
                 log.error(f"Error parsing {file.name}: {str(e)}")
-                return None
 
-        # Create tasks for all files
-        for file in files:
-            tasks.append(process_file(file))
-
-        # Process all files concurrently
-        results = await asyncio.gather(*tasks)
-
-        # Filter out None results (failed files)
-        documents = [doc for doc in results if doc is not None]
         return documents
