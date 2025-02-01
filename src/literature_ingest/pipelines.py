@@ -1,7 +1,6 @@
 from collections import defaultdict
 from pathlib import Path
 from typing import List
-import asyncio
 
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.models import ArticleType, Document
@@ -26,7 +25,7 @@ Saving those, we can trace file lineage easily.
 
 """
 
-async def pipeline_parse_missing_files_in_pmc(
+def pipeline_parse_missing_files_in_pmc(
         unzipped_files: List[Path],
         parsed_dir: Path = Path("data/pipelines/pmc/parsed/"),
     ):
@@ -43,7 +42,7 @@ async def pipeline_parse_missing_files_in_pmc(
     unzipped_files_to_parse = list(unzipped_files_to_parse.values())
 
     print(f"Parsing {len(unzipped_files_to_parse)} files, out of total available {len(unzipped_files)}...")
-    parsed_files = await parser.parse_docs(unzipped_files_to_parse, parsed_dir)
+    parsed_files = parser.parse_docs(unzipped_files_to_parse, parsed_dir)
 
     actual_parsed_files = set(parsed_files)
     failed_files = []
@@ -57,19 +56,19 @@ async def pipeline_parse_missing_files_in_pmc(
     return parsed_files, failed_files
 
 
-async def pipeline_parse_pmc(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
+def pipeline_parse_pmc(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
     parser = PMCParser()
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Parsing {len(unzipped_files)} files...")
-    parsed_files = await parser.parse_docs(unzipped_files, parsed_dir)
+    parsed_files = parser.parse_docs(unzipped_files, parsed_dir)
 
     print(f"Parsed {len(parsed_files)} files...")
     parser.print_article_type_distribution()
     return parsed_files
 
 
-async def pipeline_ingest_pmc_sample(
+def pipeline_ingest_pmc_sample(
         raw_dir: Path = Path("data/pipelines/sample_pmc/raw/"),
         unzipped_dir: Path = Path("data/pipelines/sample_pmc/unzipped/"),
         parsed_dir: Path = Path("data/pipelines/sample_pmc/parsed/"),
@@ -98,12 +97,12 @@ async def pipeline_ingest_pmc_sample(
 
     unzipped_files_list = list(unzipped_dir.glob("*.xml"))
     print("Parsing PMC data..." )
-    parsed_files = await pipeline_parse_pubmed(unzipped_files_list, parsed_dir)
+    parsed_files = pipeline_parse_pubmed(unzipped_files_list, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PMC data")
 
 
-async def pipeline_ingest_pubmed_sample(
+def pipeline_ingest_pubmed_sample(
         raw_dir: Path = Path("data/pipelines/sample_pubmed/raw/"),
         unzipped_dir: Path = Path("data/pipelines/sample_pubmed/unzipped/"),
         parsed_dir: Path = Path("data/pipelines/sample_pubmed/parsed/"),
@@ -131,12 +130,12 @@ async def pipeline_ingest_pubmed_sample(
 
     unzipped_files_list = list(unzipped_dir.glob("*.xml"))
     print("Parsing PMC data..." )
-    parsed_files = await pipeline_parse_pubmed(unzipped_files_list, parsed_dir)
+    parsed_files = pipeline_parse_pubmed(unzipped_files_list, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PMC data")
 
 
-async def pipeline_download_pubmed(
+def pipeline_download_pubmed(
         raw_dir: Path = Path("data/pipelines/pubmed/raw/"),
     ) -> List[Path]:
     # Create directories
@@ -150,7 +149,7 @@ async def pipeline_download_pubmed(
     print("DONE: Download Pubmed data")
     return baseline_files_downloaded, baseline_date
 
-async def pipeline_unzip_pubmed(
+def pipeline_unzip_pubmed(
         files_for_unzipping: List[Path],
         unzipped_dir: Path = Path("data/pipelines/pubmed/unzipped/"),
     ):
@@ -172,14 +171,14 @@ async def pipeline_unzip_pubmed(
     return unzipped_files_list
 
 
-async def pipeline_parse_pubmed(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pubmed/parsed/")):
+def pipeline_parse_pubmed(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pubmed/parsed/")):
     print("Parsing PubMed data..." )
 
     parser = PubMedParser()
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Parsing {len(unzipped_files)} files...")
-    parsed_files = await parser.parse_docs(unzipped_files, parsed_dir)
+    parsed_files = parser.parse_docs(unzipped_files, parsed_dir)
 
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PubMed data")
@@ -187,7 +186,7 @@ async def pipeline_parse_pubmed(unzipped_files: List[Path], parsed_dir: Path = P
     return parsed_files
 
 
-async def pipeline_ingest_pubmed(
+def pipeline_ingest_pubmed(
         raw_dir: Path = Path("data/pipelines/pubmed/raw/"),
         unzipped_dir: Path = Path("data/pipelines/pubmed/unzipped/"),
         parsed_dir: Path = Path("data/pipelines/pubmed/parsed/"),
@@ -200,7 +199,7 @@ async def pipeline_ingest_pubmed(
     parsed_dir.mkdir(parents=True, exist_ok=True)
 
     # Download data
-    baseline_files_downloaded, baseline_date = await pipeline_download_pubmed(raw_dir)
+    baseline_files_downloaded, baseline_date = pipeline_download_pubmed(raw_dir)
 
     dated_raw_dir = raw_dir / baseline_date
 
@@ -213,7 +212,7 @@ async def pipeline_ingest_pubmed(
     else:
         files_for_unzipping = baseline_files_downloaded
 
-    unzipped_files_list = await pipeline_unzip_pubmed(files_for_unzipping, unzipped_dir)
+    unzipped_files_list = pipeline_unzip_pubmed(files_for_unzipping, unzipped_dir)
 
     # Unzip data
     if parse_all:
@@ -223,10 +222,10 @@ async def pipeline_ingest_pubmed(
     else:
         files_for_parsing = unzipped_files_list
 
-    parsed_files = await pipeline_parse_pubmed(files_for_parsing, parsed_dir)
+    parsed_files = pipeline_parse_pubmed(files_for_parsing, parsed_dir)
 
 
-async def pipeline_ingest_pmc(
+def pipeline_ingest_pmc(
         raw_dir: Path = Path("data/pipelines/pmc/raw/"),
         unzipped_dir: Path = Path("data/pipelines/pmc/unzipped/"),
         parsed_dir: Path = Path("data/pipelines/pmc/parsed/"),
@@ -258,6 +257,6 @@ async def pipeline_ingest_pmc(
     # parse data
     unzipped_files_list = list(unzipped_dir.glob("*.xml"))
     print("Parsing PMC data..." )
-    parsed_files = await pipeline_parse_pmc(unzipped_files_list, parsed_dir)
+    parsed_files = pipeline_parse_pmc(unzipped_files_list, parsed_dir)
     print(f"Parsed {len(parsed_files)} files...")
     print("DONE: Parse PMC data")
