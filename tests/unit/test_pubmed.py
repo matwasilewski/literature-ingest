@@ -4,11 +4,10 @@ from literature_ingest.pubmed import PubMedParser
 from literature_ingest.models import ArticleType, Document, DocumentId, Author, JournalMetadata, PublicationDates
 from datetime import datetime, timezone
 
-@pytest.mark.asyncio
-async def test_parse_doc_basic_fields(pubmed_doc):
+def test_parse_doc_basic_fields(pubmed_doc):
     """Test basic document field parsing"""
     parser = PubMedParser()
-    docs = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    docs = parser.parse_doc(pubmed_doc, Path("test.xml"))
     docs = sorted(docs, key=lambda x: x.ids[0].id)
     doc = docs[0]
 
@@ -34,11 +33,10 @@ async def test_parse_doc_basic_fields(pubmed_doc):
     assert doc.journal.issn == "0006-2944"
     assert doc.journal.abbreviation == "Biochem Med"
 
-@pytest.mark.asyncio
-async def test_parse_doc_authors(pubmed_doc):
+def test_parse_doc_authors(pubmed_doc):
     """Test author information parsing"""
     parser = PubMedParser()
-    doc = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    doc = parser.parse_doc(pubmed_doc, Path("test.xml"))
     doc = sorted(doc, key=lambda x: x.ids[0].id)
     doc = doc[0]
 
@@ -52,11 +50,10 @@ async def test_parse_doc_authors(pubmed_doc):
     assert authors[2].name == "Palese, M"
     assert authors[3].name == "Tephly, T R"
 
-@pytest.mark.asyncio
-async def test_parse_doc_dates(pubmed_doc):
+def test_parse_doc_dates(pubmed_doc):
     """Test publication dates parsing"""
     parser = PubMedParser()
-    docs = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    docs = parser.parse_doc(pubmed_doc, Path("test.xml"))
     docs = sorted(docs, key=lambda x: x.ids[0].id)
     doc = docs[0]
 
@@ -64,11 +61,10 @@ async def test_parse_doc_dates(pubmed_doc):
     assert doc.year == 1975
     assert doc.publication_dates.collection_date == "1975-6"
 
-@pytest.mark.asyncio
-async def test_parse_doc_content(pubmed_doc):
+def test_parse_doc_content(pubmed_doc):
     """Test document content parsing"""
     parser = PubMedParser()
-    docs = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    docs = parser.parse_doc(pubmed_doc, Path("test.xml"))
     docs = sorted(docs, key=lambda x: x.ids[0].id)
     doc = docs[0]
 
@@ -83,15 +79,15 @@ async def test_parse_doc_content(pubmed_doc):
     assert "Journal Article" in doc.subject_groups
     assert "Research Support, U.S. Gov't, P.H.S." in doc.subject_groups
 
-@pytest.mark.asyncio
-async def test_parse_doc_pmid_2(pubmed_doc):
-    """Test parsing of PMID 2 article with its unique fields"""
+def test_parse_doc_pmid_2(pubmed_doc):
+    """Test document field parsing for PMID 2"""
     parser = PubMedParser()
-    docs = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    docs = parser.parse_doc(pubmed_doc, Path("test.xml"))
     docs = sorted(docs, key=lambda x: x.ids[0].id)
     doc = docs[1]
 
-    # Test core identifiers including PII
+    # Test core identifiers
+    assert isinstance(doc, Document)
     assert doc.ids == [
         DocumentId(id="2", type="pubmed"),
         DocumentId(id="0006-291X(75)90482-9", type="pii"),
@@ -124,11 +120,10 @@ async def test_parse_doc_pmid_2(pubmed_doc):
     assert "Research Support, U.S. Gov't, Non-P.H.S." in doc.subject_groups
     assert "Research Support, U.S. Gov't, P.H.S." in doc.subject_groups
 
-@pytest.mark.asyncio
-async def test_parse_doc_pmid_3(pubmed_doc):
-    """Test parsing of PMID 3 article with its unique fields"""
+def test_parse_doc_pmid_3(pubmed_doc):
+    """Test document field parsing for PMID 3"""
     parser = PubMedParser()
-    docs = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    docs = parser.parse_doc(pubmed_doc, Path("test.xml"))
     docs = sorted(docs, key=lambda x: x.ids[0].id)
     doc = docs[2]
 
@@ -166,11 +161,10 @@ async def test_parse_doc_pmid_3(pubmed_doc):
     assert "Journal Article" in doc.subject_groups
     assert "Research Support, U.S. Gov't, P.H.S." in doc.subject_groups
 
-@pytest.mark.asyncio
-async def test_parse_doc_pmid_30934(pubmed_doc):
-    """Test parsing of PMID 30934 article with its unique fields"""
+def test_parse_doc_pmid_30934(pubmed_doc):
+    """Test document field parsing for PMID 30934"""
     parser = PubMedParser()
-    docs = await parser.parse_doc(pubmed_doc, Path("test.xml"))
+    docs = parser.parse_doc(pubmed_doc, Path("test.xml"))
     docs = sorted(docs, key=lambda x: x.ids[0].id)
     doc = docs[3]
 

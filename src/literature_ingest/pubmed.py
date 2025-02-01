@@ -2,8 +2,6 @@
 
 from collections import defaultdict
 import multiprocessing
-from concurrent.futures import ThreadPoolExecutor
-import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
@@ -19,9 +17,6 @@ class PubMedParser:
         self.unique_article_types = defaultdict(int)
         # Use number of CPU cores for ThreadPoolExecutor
         self._cpu_count = multiprocessing.cpu_count()
-        self._executor = ThreadPoolExecutor(max_workers=self._cpu_count)
-        # Match semaphore to CPU count to avoid oversubscription
-        self._semaphore = asyncio.Semaphore(self._cpu_count)
 
     def _extract_journal_metadata(self, journal_elem) -> JournalMetadata:
         """Extract journal metadata from Journal element"""
@@ -221,10 +216,8 @@ class PubMedParser:
 
         return ArticleType.RESEARCH_ARTICLE  # Default if no match found
 
-    async def parse_doc(self, file_contents: str, file_name: Path) -> List[Document]:
-        """Parse PubMed XML document and extract relevant information asynchronously"""
-        # Since XML parsing is CPU-bound, we'll use a thread pool
-        loop = asyncio.get_event_loop()
+    def parse_doc(self, file_contents: str, file_name: Path) -> List[Document]:
+        """Parse PubMed XML document and extract relevant information"""
         # Normalize the document
         normalized_content = normalize_document(file_contents)
         root = ET.fromstring(file_contents)
@@ -234,15 +227,10 @@ class PubMedParser:
             raise ValueError("No Article element found in PubMed XML")
 
         documents = []
-        # Create tasks for processing each article
-        tasks = [
-            loop.run_in_executor(self._executor, self._parse_docs_sync, article)
-            for article in articles
-        ]
+        for article in articles:
+            doc = self._parse_docs_sync(article)
+            documents.append(doc)
 
-        # Wait for all tasks to complete and collect results
-        results = await asyncio.gather(*tasks)
-        documents.extend(results)
         return documents
 
     def _parse_docs_sync(self, article: ET.Element) -> Document:
@@ -307,36 +295,31 @@ class PubMedParser:
             parsed_date=datetime.now(timezone.utc)
         )
 
-    async def parse_docs(self, files: list[Path], output_dir: Path) -> list[Path]:
-        """Parse a list of PubMed XML files and save to output_dir asynchronously"""
+    def parse_docs(self, files: list[Path], output_dir: Path) -> list[Path]:
+        """Parse a list of PubMed XML files and save to output_dir"""
         documents = []
-        tasks = []
+        counter = 0
+        timestamp = datetime.now(timezone.utc)
 
-        async def process_file(file: Path) -> Path | None:
+        for file in files:
             file_name = file.stem + '.json'
             try:
-                async with self._semaphore:  # Use semaphore to limit concurrent operations
-                    with file.open(mode='r') as f:
-                        docs = await self.parse_doc(f.read(), file)
+                with file.open(mode='r') as f:
+                    docs = self.parse_doc(f.read(), file)
+                    counter += 1
+                    if counter % 10000 == 0:
+                        elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
+                        log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
+                        timestamp = datetime.now(timezone.utc)
 
-                    output_paths = []
-                    for doc_idx, doc in enumerate(docs):
-                        output_path = output_dir / f"{file.stem}_{doc_idx}.json"
-                        with open(output_path, 'w') as f:
-                            f.write(doc.model_dump_json(indent=2))
-                        output_paths.append(output_path)
-                    return output_paths
+                output_paths = []
+                for doc_idx, doc in enumerate(docs):
+                    output_path = output_dir / f"{file.stem}_{doc_idx}.json"
+                    with open(output_path, 'w') as f:
+                        f.write(doc.model_dump_json(indent=2))
+                    output_paths.append(output_path)
+                documents.extend(output_paths)
             except Exception as e:
                 log.error(f"Error parsing {file.name}: {str(e)}")
-                return None
 
-        # Create tasks for all files
-        for file in files:
-            tasks.append(process_file(file))
-
-        # Process all files concurrently
-        results = await asyncio.gather(*tasks)
-
-        # Filter out None results (failed files)
-        documents = [doc for doc in results if doc is not None]
         return documents

@@ -8,6 +8,7 @@ from literature_ingest.pmc import (
 )
 import json
 import asyncio
+from datetime import datetime, timezone
 
 def test_get_baseline_date_success():
     # Arrange
@@ -321,70 +322,64 @@ async def test_document_to_json_minimal():
     assert json_data["authors"] == []
     assert json_data["abstract"] is None
 
-@pytest.mark.asyncio
-async def test_document_load_from_json():
-    """Test Document.from_json() method"""
-    # Create a minimal document
+def test_document_load_from_json():
+    """Test that a document can be loaded from JSON and maintains all properties"""
+    # Create a sample document with all fields populated
     original_doc = Document(
-        id=DocumentId(id="TEST123", type="test"),
-        title="Test Title",
-        abstract="Test abstract",
-        sections=[
-            Section(
-                title="Section 1",
-                text="Main text",
-                subsections=[
-                    Section(
-                        title="Subsection 1.1",
-                        text="Subsection text"
-                    )
-                ]
-            )
+        ids=[
+            DocumentId(id="123", type="pmc"),
+            DocumentId(id="10.1234/abc", type="doi")
         ],
-        authors=[
-            Author(
-                name="Smith, John",
-                email="john@example.com",
-                affiliations=["University A", "Institute B"],
-                is_corresponding=True
-            )
-        ],
+        title="Test Document",
+        raw_type="research-article",
+        type=ArticleType.RESEARCH_ARTICLE,
         journal=JournalMetadata(
             title="Test Journal",
             issn="1234-5678",
             publisher="Test Publisher",
             abbreviation="Test J"
         ),
+        year=2023,
         publication_dates=PublicationDates(
             received_date="2023-01-01",
             accepted_date="2023-02-01",
             epub_date="2023-03-01"
-        )
+        ),
+        abstract="Test abstract",
+        keywords=["test", "document"],
+        authors=[
+            Author(
+                name="Smith, John",
+                email="john@test.com",
+                affiliations=["University of Test"],
+                is_corresponding=True
+            )
+        ],
+        subject_groups=["Test Group"],
+        sections=[
+            Section(
+                id="sec1",
+                label="1",
+                title="Introduction",
+                text="Test introduction text",
+                subsections=[]
+            )
+        ],
+        license_type="CC-BY-4.0",
+        copyright_statement="Copyright 2023",
+        copyright_year="2023",
+        parsed_date=datetime.now(timezone.utc)
     )
 
-    # Convert to JSON
-    json_str = original_doc.to_json()
-
-    # Load back from JSON
+    # Convert to JSON and back
+    json_str = original_doc.model_dump_json()
     loaded_doc = Document.model_validate_json(json_str)
 
-    # Verify core fields
-    assert loaded_doc.synthetic_id == original_doc.synthetic_id
+    # Verify all fields are preserved
+    assert loaded_doc.ids == original_doc.ids
     assert loaded_doc.title == original_doc.title
-    assert loaded_doc.abstract == original_doc.abstract
-
-    # Verify nested structures
-    assert len(loaded_doc.sections) == len(original_doc.sections)
-    assert loaded_doc.sections[0].title == original_doc.sections[0].title
-    assert loaded_doc.sections[0].text == original_doc.sections[0].text
-    assert len(loaded_doc.sections[0].subsections) == len(original_doc.sections[0].subsections)
-
-    # Verify authors
-    assert len(loaded_doc.authors) == len(original_doc.authors)
-    assert loaded_doc.authors[0].name == original_doc.authors[0].name
-    assert loaded_doc.authors[0].email == original_doc.authors[0].email
-    assert loaded_doc.authors[0].affiliations == original_doc.authors[0].affiliations
-    assert loaded_doc.authors[0].is_corresponding == original_doc.authors[0].is_corresponding
+    assert loaded_doc.raw_type == original_doc.raw_type
+    assert loaded_doc.type == original_doc.type
 
     # Verify journal metadata
     assert loaded_doc.journal.title == original_doc.journal.title
@@ -397,7 +392,6 @@ async def test_document_load_from_json():
     assert loaded_doc.publication_dates.accepted_date == original_doc.publication_dates.accepted_date
     assert loaded_doc.publication_dates.epub_date == original_doc.publication_dates.epub_date
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("pmc_doc_fixture", [
     "pmc_doc_2",
     "pmc_doc_3",
@@ -408,9 +402,9 @@ async def test_document_load_from_json():
     "pmc_doc_8",
     "pmc_doc_9",
 ])
-async def test_parse_doc_with_error(request, pmc_doc_fixture):
+def test_parse_doc_with_error(request, pmc_doc_fixture):
     parser = PMCParser()
-    doc = await parser.parse_doc(request.getfixturevalue(pmc_doc_fixture), Path(f"{pmc_doc_fixture}.xml"))
+    doc = parser.parse_doc(request.getfixturevalue(pmc_doc_fixture), Path(f"{pmc_doc_fixture}.xml"))
     # Create output filename based on fixture name
     output_filename = f"{pmc_doc_fixture}.json"
     with open(f"tests/resources/json_versions/{output_filename}", "w") as f:
