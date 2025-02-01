@@ -6,7 +6,6 @@ from literature_ingest.normalization import normalize_document
 from literature_ingest.pipelines import pipeline_ingest_pmc, pipeline_ingest_pmc_sample, pipeline_ingest_pubmed, pipeline_ingest_pubmed_sample, pipeline_parse_missing_files_in_pmc
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.utils.logging import get_logger
-import asyncio
 
 logger = get_logger(__name__, "info")
 
@@ -67,7 +66,7 @@ def parse_doc(input_path: str, output_path: str, format: str):
 
         # Parse document
         parser = PMCParser()
-        doc = asyncio.run(parser.parse_doc(xml_content, Path(input_path)))
+        doc = parser.parse_doc(xml_content, Path(input_path))
 
         # Write output based on format
         with open(output_path, 'w') as f:
@@ -189,7 +188,7 @@ def parse_docs(input_dir: str, output_dir: str, format: str, pattern: str):
             return await parser.parse_docs(xml_files, output_path)
 
         # Run the async processing
-        documents = asyncio.run(process_files())
+        documents = process_files()
 
         click.echo(f"Successfully processed {len(documents)} files")
 
@@ -206,7 +205,7 @@ def pipelines():
 def ingest_pmc():
     """Ingest PMC data."""
     click.echo("Ingesting PMC data...")
-    asyncio.run(pipeline_ingest_pmc())
+    pipeline_ingest_pmc()
     click.echo("DONE: Ingest PMC data")
 
 
@@ -221,12 +220,12 @@ def ingest_pmc():
 def ingest_pmc_sample(file_names: List[str]):
     """Ingest PMC sample data."""
     click.echo("Ingesting PMC sample data...")
-    asyncio.run(pipeline_ingest_pmc_sample(
+    pipeline_ingest_pmc_sample(
         raw_dir=Path("data/pipelines/sample_pmc/raw/"),
         unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/"),
         parsed_dir=Path("data/pipelines/sample_pmc/parsed/"),
         file_names=file_names
-    ))
+    )
     click.echo("DONE: Ingest PMC sample data")
 
 
@@ -241,12 +240,12 @@ def ingest_pmc_sample(file_names: List[str]):
 def ingest_pubmed_sample(file_names: List[str]):
     """Ingest PMC sample data."""
     click.echo("Ingesting Pubmed sample data...")
-    asyncio.run(pipeline_ingest_pubmed_sample(
+    pipeline_ingest_pubmed_sample(
         raw_dir=Path("data/pipelines/sample_pubmed/raw/"),
         unzipped_dir=Path("data/pipelines/sample_pubmed/unzipped/"),
         parsed_dir=Path("data/pipelines/sample_pubmed/parsed/"),
         file_names=file_names
-    ))
+    )
     click.echo("DONE: Ingest Pubmed sample data")
 
 
@@ -264,13 +263,13 @@ def ingest_pubmed_sample(file_names: List[str]):
 def ingest_pubmed(unzip_all: bool, parse_all: bool):
     """Ingest Pubmed data."""
     click.echo("Ingesting Pubmed data...")
-    asyncio.run(pipeline_ingest_pubmed(
+    pipeline_ingest_pubmed(
         raw_dir=Path("data/pipelines/pubmed/raw/"),
         unzipped_dir=Path("data/pipelines/pubmed/unzipped/"),
         parsed_dir=Path("data/pipelines/pubmed/parsed/"),
         unzip_all=unzip_all,
         parse_all=parse_all,
-    ))
+    )
     click.echo("DONE: Ingest Pubmed data")
 
 @pipelines.command()
@@ -298,7 +297,7 @@ def parse_missing_files_in_pmc(file_list: Optional[str]):
         file_list = Path(file_list).open().read().splitlines()
 
     click.echo(f"Parsing {len(file_list)} missing files in PMC...")
-    parsed_files, failed_files = asyncio.run(pipeline_parse_missing_files_in_pmc(file_list))
+    parsed_files, failed_files = pipeline_parse_missing_files_in_pmc(file_list)
     click.echo(f"DONE: Parsed {len(parsed_files)} files, failed {len(failed_files)} files")
 
     if len(failed_files) > 0:
