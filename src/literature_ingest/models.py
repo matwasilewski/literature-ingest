@@ -127,9 +127,7 @@ class PublicationDates(BaseModel):
 
 class Section(BaseModel):
     """Represents a section in the document"""
-    id: Optional[str] = None  # section id if present
-    label: Optional[str] = None  # section number/label if present
-    title: Optional[str] = None
+    name: str
     text: str
 
     class Config:

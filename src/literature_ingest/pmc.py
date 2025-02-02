@@ -471,16 +471,9 @@ class PMCParser:
         xpath = "./sec" if parent_section is None else ".//sec"
 
         for sec in body_elem.findall(xpath):
-            # Get section ID if present
-            section_id = sec.get("id")
-
-            # Get section label if present
-            label_elem = sec.find("label")
-            label = label_elem.text if label_elem is not None else None
-
             # Get section title
             title_elem = sec.find("title")
-            title = title_elem.text if title_elem is not None else "Untitled Section"
+            section_name = title_elem.text if title_elem is not None else ""
 
             # Get section text content
             text = self._extract_section_text(sec)
@@ -488,20 +481,21 @@ class PMCParser:
             if text is None:
                 continue
 
+            text = text.strip()
+
             # Process direct subsections and add their content to the parent section's text
             for subsec in sec.findall("./sec"):
                 subsec_title = subsec.find("title")
-                subsec_title_text = subsec_title.text if subsec_title is not None else "Untitled Subsection"
+                subsec_title_text = subsec_title.text if subsec_title is not None else ""
                 subsec_text = self._extract_section_text(subsec)
 
                 if subsec_text:
                     text += f"\n\n{subsec_title_text}\n{subsec_text}"
+                text = text.strip()
 
             # Create section object (note: removed subsections field)
             section = Section(
-                id=section_id,
-                label=label,
-                title=title,
+                name=section_name,
                 text=text
             )
 
@@ -572,8 +566,13 @@ class PMCParser:
                 if first_p is not None:
                     title = ''.join(first_p.itertext()).strip()
 
+        sections = []
+
+        # If title is still None, use the file name as a fallback
         if title is None:
-            title = "Untitled Article"  # Provide a default title to satisfy validation
+            title = ""  # Provide a default title to satisfy validation
+
+        sections.append(Section(name="title", text=title))
 
         # Get journal metadata
         journal_meta = front.find(".//journal-meta")
@@ -593,6 +592,7 @@ class PMCParser:
 
         # Get abstract
         abstract = self._extract_abstract(front)
+        sections.append(Section(name="abstract", text=abstract))
 
         # Get keywords
         keywords = []
@@ -634,13 +634,11 @@ class PMCParser:
 
         return Document(
             ids=ids,
-            title=title,
             raw_type=root.get("article-type", None),
             type=article_type,
             journal=journal,
             year=publication_year,
             publication_dates=publication_dates,
-            abstract=abstract,
             keywords=keywords,
             authors=authors,
             subject_groups=subject_groups,
