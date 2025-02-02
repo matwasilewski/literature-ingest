@@ -257,8 +257,12 @@ class PubMedParser:
 
         # Get title
         sections = []
-        title_elem = medline_citation.find(".//ArticleTitle")
-        title = title_elem.text if title_elem is not None else ""
+        title_elem = medline_citation.find(".//Article/ArticleTitle")
+        if title_elem is not None:
+            # Get all text content including nested elements
+            title = ''.join(title_elem.itertext()).strip()
+        else:
+            title = ""
         sections.append(Section(name="title", text=title))
 
         # Get journal metadata
@@ -272,15 +276,24 @@ class PubMedParser:
         # Get authors
         authors = self._extract_authors(article)
 
-        # Get abstract
-        abstract_elem = medline_citation.find(".//Abstract/AbstractText")
-        abstract = abstract_elem.text if abstract_elem is not None else ""
-        sections.append(
-            Section(
-                name="abstract",
-                text=abstract,
+        # Get abstract - Fix the abstract parsing
+        abstract_text = ""
+        abstract_elem = medline_citation.find(".//Abstract")
+        if abstract_elem is not None:
+            # Handle multiple AbstractText elements
+            abstract_texts = []
+            for abstract_text_elem in abstract_elem.findall("AbstractText"):
+                if abstract_text_elem.text:
+                    abstract_texts.append(abstract_text_elem.text)
+            abstract_text = " ".join(abstract_texts)
+
+        if abstract_text:
+            sections.append(
+                Section(
+                    name="abstract",
+                    text=abstract_text,
+                )
             )
-        )
 
         # Get keywords from MeSH terms
         medlineCitation = article.find(".//MedlineCitation")

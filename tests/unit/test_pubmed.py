@@ -26,8 +26,7 @@ def test_parse_doc_basic_fields(pubmed_doc):
 
     assert doc.publication_dates.collection_date == "1975-6"
 
-    assert doc.sections[1].name == "abstract"
-    assert doc.sections[1].text == "Formate assay in body fluids: application in methanol poisoning."
+    assert len(doc.sections) == 1
 
     # Test journal metadata
     assert isinstance(doc.journal, JournalMetadata)
@@ -97,7 +96,8 @@ def test_parse_doc_pmid_2(pubmed_doc):
     ]
 
     # Test basic metadata
-    assert doc.title == "Delineation of the intimate details of the backbone conformation of pyridine nucleotide coenzymes in aqueous solution."
+    assert doc.sections[0].name == "title"
+    assert doc.sections[0].text == "Delineation of the intimate details of the backbone conformation of pyridine nucleotide coenzymes in aqueous solution."
     assert doc.type == ArticleType.RESEARCH_ARTICLE  # Default type for Journal Article
 
     # Test journal metadata with electronic ISSN
@@ -137,7 +137,8 @@ def test_parse_doc_pmid_3(pubmed_doc):
     ]
 
     # Test basic metadata
-    assert doc.title == "Metal substitutions incarbonic anhydrase: a halide ion probe study."
+    assert doc.sections[0].name == "title"
+    assert doc.sections[0].text == "Metal substitutions incarbonic anhydrase: a halide ion probe study."
     assert doc.type == ArticleType.RESEARCH_ARTICLE  # Default type for Journal Article
 
     # Test journal metadata with print ISSN
@@ -177,7 +178,8 @@ def test_parse_doc_pmid_30934(pubmed_doc):
     assert doc.synthetic_id == "type=pubmed;id=30934"
 
     # Test basic metadata
-    assert doc.title == "pH and Eh relationships in the body."
+    assert doc.sections[0].name == "title"
+    assert doc.sections[0].text == "pH and Eh relationships in the body."
     assert doc.type == ArticleType.RESEARCH_ARTICLE  # Default type for Journal Article
     assert doc.year == 1976  # From PubDate MedlineDate
 
@@ -196,7 +198,8 @@ def test_parse_doc_pmid_30934(pubmed_doc):
 
     # Test abstract
     expected_abstract = "This report concerns application of the graphical method for representing pH and Eh relationships in macromolecular systems (see previous paper) to in vivo studies. The author presents reasons for concluding that controlled measurements of urine are satisfactory indicators of changes in pH and Eh in the body whereas blood studies remain relatively constant. The original concept had to be modified because of two little known \"reversing phenomena\". One is well known to physicians as the \"acid rebound\" because of the acid reaction of urine when an excess of a base is administered. This is a paradox because it would be expected to be more alkaline. The second phenomenon occurs following hyperoxidation, such as in narcotic addiction, and results in reduction. Both hyperalkalinity and hyperoxidation result in an acid reaction. The author concludes that they are phases of a single phenomenon. It is the basis for \"Chapman's law\": Unfavorable effects on the body cause the urine pH and Eh to shift away from normal whereas favorable effects cause them to shift toward normal."
-    assert doc.abstract == expected_abstract
+    assert doc.sections[1].name == "abstract"
+    assert doc.sections[1].text == expected_abstract
 
     # Test keywords/MeSH terms
     assert len(doc.keywords) == 5
