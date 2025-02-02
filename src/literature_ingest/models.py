@@ -140,7 +140,6 @@ class Document(BaseModel):
     ids: List[DocumentId] = []
 
     # Basic metadata
-    title: str
     raw_type: Optional[str] = None
     type: Optional[ArticleType] = None
 
@@ -155,7 +154,6 @@ class Document(BaseModel):
     publication_dates: PublicationDates = PublicationDates()
 
     # Content
-    abstract: Optional[str] = None
     keywords: List[str] = []
     sections: List[Section] = []  # Main sections of the document
 
@@ -188,4 +186,4 @@ class Document(BaseModel):
     def to_raw_text(self) -> str:
         """Convert document to raw text format.
         """
-        return "\n\n".join(self.sections) if self.sections else ""
+        return "\n\n".join([section.text for section in self.sections]) if self.sections else ""

@@ -475,8 +475,11 @@ class PMCParser:
             title_elem = sec.find("title")
             section_name = title_elem.text if title_elem is not None else ""
 
+
             # Get section text content
-            text = self._extract_section_text(sec)
+            text = ""
+            text += section_name + "\n"
+            text += self._extract_section_text(sec)
 
             if text is None:
                 continue
@@ -566,12 +569,12 @@ class PMCParser:
                 if first_p is not None:
                     title = ''.join(first_p.itertext()).strip()
 
-        sections = []
 
         # If title is still None, use the file name as a fallback
         if title is None:
             title = ""  # Provide a default title to satisfy validation
 
+        sections = []
         sections.append(Section(name="title", text=title))
 
         # Get journal metadata
@@ -628,9 +631,8 @@ class PMCParser:
 
         # Get the document body and extract sections
         body = root.find(".//body")
-        sections = []
         if body is not None:
-            sections = self._extract_sections(body)
+            sections.extend(self._extract_sections(body))
 
         return Document(
             ids=ids,

@@ -51,7 +51,8 @@ def test_parse_doc_basic_fields(pmc_doc):
     assert doc.synthetic_id == "type=doi;id=10.1016/j.ijcchd.2022.100354&type=pmc;id=PMC10335194&type=pmid;id=37435574&type=pii;id=S2666-6685(22)00037-4"
 
     # Test basic metadata
-    assert doc.title == "Maternal and fetal outcomes in pregnant women with pulmonary hypertension: The impact of left heart disease"
+    assert doc.sections[0].name == "title"
+    assert doc.sections[0].text == "Maternal and fetal outcomes in pregnant women with pulmonary hypertension: The impact of left heart disease"
     assert doc.type == ArticleType.RESEARCH_ARTICLE
 
     # Test journal metadata
@@ -97,7 +98,7 @@ def test_parse_doc_content(pmc_doc):
     doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Test abstract
-    assert "Pulmonary hypertension (PH) due to left heart disease" in doc.abstract
+    assert "Pulmonary hypertension (PH) due to left heart disease" in doc.sections[1].text
 
     # Test keywords
     assert "Pregnancy" in doc.keywords
@@ -125,21 +126,17 @@ def test_parse_doc_sections(pmc_doc):
     assert len(doc.sections) > 0
 
     # Test first section (Introduction)
-    intro = doc.sections[0]
-    assert intro.label == "1"
-    assert intro.title == "Introduction"
-    assert intro.id == "sec1"
-    assert "Pulmonary hypertension (PH) is defined as" in intro.text
+    intro = doc.sections[2]
+    assert intro.name == "Introduction"
+    assert "Introduction\nPulmonary hypertension (PH) is defined as" in intro.text
 
     # Test Methods section and its subsections
-    methods = doc.sections[1]
-    assert methods.label == "2"
-    assert methods.title == "Methods"
-    assert methods.id == "sec2"
+    methods = doc.sections[3]
+    assert methods.name == "Methods"
 
-    assert "Patient identification, classification and data collection" in methods.text
+    assert "Methods\nWe performed a single center retrospective cohort study" in methods.text
     assert "Study design" in methods.text
-    assert "We performed a single center retrospective cohort study" in methods.text
+    assert "Patient identification, classification and data collection" in methods.text
 
 def test_parse_doc_section_hierarchy(pmc_doc):
     """Test that section hierarchy is correctly preserved"""
@@ -147,7 +144,7 @@ def test_parse_doc_section_hierarchy(pmc_doc):
     doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Find the Methods section
-    methods = next(s for s in doc.sections if s.title == "Methods")
+    methods = next(s for s in doc.sections if s.name == "Methods")
 
     # Test subsection structure
     assert "Study design" in methods.text
@@ -161,10 +158,10 @@ def test_parse_doc_section_content(pmc_doc):
     doc = parser.parse_doc(pmc_doc, Path("test.xml"))
 
     # Find the Discussion section
-    discussion = next(s for s in doc.sections if s.title == "Discussion")
+    discussion = next(s for s in doc.sections if s.name == "Discussion")
 
     # Test section content
-    assert discussion.label == "4"
+    assert discussion.name == "Discussion"
     assert "In this large cohort of pregnant women with PH" in discussion.text
 
     # Test that subsection content is preserved
@@ -181,15 +178,15 @@ def test_document_to_raw_text(pmc_doc):
     lines = raw_text.split("\n\n")
 
     # Title should be first
-    assert lines[0] == doc.title
+    assert lines[0] == doc.sections[0].text
 
     # Abstract should be second
     assert "Pulmonary hypertension (PH) due to left heart disease" in lines[1]
 
     # Main text should follow
-    assert "Pulmonary hypertension (PH) is defined as" in raw_text  # From Introduction
-    assert "We performed a single center retrospective cohort study" in raw_text  # From Methods
-    assert "We recognize this data has limitations" in raw_text  # From Discussion
+    assert "Introduction\nPulmonary hypertension (PH) is defined as" in raw_text  # From Introduction
+    assert "Methods\nWe performed a single center retrospective cohort study" in raw_text  # From Methods
+    assert "Discussion\nIn this large cohort of pregnant women with PH" in raw_text  # From Discussion
 
     # Check that section titles are not included in raw text
     assert "1. Introduction" not in raw_text
@@ -214,7 +211,8 @@ def test_document_to_json(pmc_doc):
         {"id": "S2666-6685(22)00037-4", "type": "pii"},
         {"id": "100354", "type": "publisher-id"},
     ]
-    assert json_data["title"] == doc.title
+    assert json_data["sections"][0]["name"] == "title"
+    assert json_data["sections"][0]["text"] == "Maternal and fetal outcomes in pregnant women with pulmonary hypertension: The impact of left heart disease"
     assert json_data["type"] == "Research Article"
 
     # Check nested structures
@@ -224,9 +222,8 @@ def test_document_to_json(pmc_doc):
 
     # Check sections
     assert len(json_data["sections"]) > 0
-    first_section = json_data["sections"][0]
-    assert first_section["title"] == "Introduction"
-    assert first_section["label"] == "1"
+    first_section = json_data["sections"][2]
+    assert first_section["name"] == "Introduction"
 
     # Check dates
     assert json_data["publication_dates"]["received_date"] == "2021-3-23"
@@ -237,8 +234,10 @@ def test_doc_2(pmc_doc_2):
     doc = parser.parse_doc(pmc_doc_2, Path("test.xml"))
     assert doc
 
-    assert doc.title == "Co-regulation of intragenic microRNA miR-153 and its host gene Ia-2β: identification of miR-153 target genes with functions related to IA-2β in pancreas and brain"
-    assert doc.abstract.startswith("We analysed the genomic organisation of miR-153, a microRNA embedded in genes that encode two of the major type 1 diabetes autoantigen")
+    assert doc.sections[0].name == "title"
+    assert doc.sections[0].text == "Co-regulation of intragenic microRNA miR-153 and its host gene Ia-2β: identification of miR-153 target genes with functions related to IA-2β in pancreas and brain"
+    assert doc.sections[1].name == "abstract"
+    assert doc.sections[1].text.startswith("We analysed the genomic organisation of miR-153")
     assert doc.keywords == ["Diabetes", "Glucose stimulation", "IA-2β", "MicroRNA", "miR-153", "Neurodegeneration"]
     assert doc.raw_type == "research-article"
     assert doc.type == "Research Article"
@@ -250,19 +249,25 @@ def test_doc_2(pmc_doc_2):
     assert doc.publication_dates.received_date == "2013-1-23"
     assert doc.publication_dates.accepted_date == "2013-2-26"
     assert doc.publication_dates.epub_date == "2013-4-18"
-    assert doc.sections[0].title == "Introduction"
-    assert doc.sections[0].text.startswith("Islet-associated protein (IA) 2 and IA-2β are major autoantigens in type 1 diabetes [1].")
+    assert doc.sections[2].name == "Introduction"
+    assert doc.sections[2].text.startswith("Introduction\nIslet-associated protein (IA) 2 and IA-2β are major autoantigens in type 1 diabetes [1].")
 
 def test_document_to_raw_text_minimal():
     """Test Document.to_raw_text() with minimal document"""
     doc = Document(
         ids=[DocumentId(id="TEST123", type="test")],
-        title="Test Title",
-        abstract="Test abstract",
         sections=[
             Section(
-                title="Section 1",
-                text="Main text\n\nSubsection 1.1\nSubsection text",
+                name="title",
+                text="Test Title",
+            ),
+            Section(
+                name="abstract",
+                text="Test abstract",
+            ),
+            Section(
+                name="Section 1",
+                text="Section 1\nMain text\n\nSubsection 1.1\nSubsection text",
             )
         ]
     )
@@ -279,7 +284,16 @@ def test_document_to_json_minimal():
     """Test Document.to_json() with minimal document"""
     doc = Document(
         ids=[DocumentId(id="TEST123", type="test")],
-        title="Test Title"
+        sections=[
+            Section(
+                name="title",
+                text="Test Title",
+            ),
+            Section(
+                name="abstract",
+                text="Test abstract",
+            ),
+        ]
     )
 
     json_str = doc.to_json()
@@ -289,11 +303,12 @@ def test_document_to_json_minimal():
     assert json_data["ids"] == [
         {"id": "TEST123", "type": "test"},
     ]
-    assert json_data["title"] == "Test Title"
-    assert json_data["sections"] == []
+    assert json_data["sections"][0]["name"] == "title"
+    assert json_data["sections"][0]["text"] == "Test Title"
     assert json_data["keywords"] == []
     assert json_data["authors"] == []
-    assert json_data["abstract"] is None
+    assert json_data["sections"][1]["name"] == "abstract"
+    assert json_data["sections"][1]["text"] == "Test abstract"
 
 def test_document_load_from_json():
     """Test that a document can be loaded from JSON and maintains all properties"""
@@ -303,7 +318,6 @@ def test_document_load_from_json():
             DocumentId(id="123", type="pmc"),
             DocumentId(id="10.1234/abc", type="doi")
         ],
-        title="Test Document",
         raw_type="research-article",
         type=ArticleType.RESEARCH_ARTICLE,
         journal=JournalMetadata(
@@ -318,7 +332,6 @@ def test_document_load_from_json():
             accepted_date="2023-02-01",
             epub_date="2023-03-01"
         ),
-        abstract="Test abstract",
         keywords=["test", "document"],
         authors=[
             Author(
@@ -331,9 +344,15 @@ def test_document_load_from_json():
         subject_groups=["Test Group"],
         sections=[
             Section(
-                id="sec1",
-                label="1",
-                title="Introduction",
+                name="title",
+                text="Test Title",
+            ),
+            Section(
+                name="abstract",
+                text="Test abstract",
+            ),
+            Section(
+                name="Introduction",
                 text="Test introduction text",
             )
         ],
@@ -349,7 +368,12 @@ def test_document_load_from_json():
 
     # Verify all fields are preserved
     assert loaded_doc.ids == original_doc.ids
-    assert loaded_doc.title == original_doc.title
+    assert loaded_doc.sections[0].name == "title"
+    assert loaded_doc.sections[0].text == "Test Title"
+    assert loaded_doc.sections[1].name == "abstract"
+    assert loaded_doc.sections[1].text == "Test abstract"
+    assert loaded_doc.sections[2].name == "Introduction"
+    assert loaded_doc.sections[2].text == "Test introduction text"
     assert loaded_doc.raw_type == original_doc.raw_type
     assert loaded_doc.type == original_doc.type
 
