@@ -187,22 +187,5 @@ class Document(BaseModel):
 
     def to_raw_text(self) -> str:
         """Convert document to raw text format.
-        Format: title, newline, abstract, newline, sections text
         """
-        components = [self.title]
-
-        if self.abstract:
-            components.append(self.abstract)
-
-        def process_section(section: Section) -> str:
-            section_text = [section.text]
-            for subsection in section.subsections:
-                section_text.append(process_section(subsection))
-            return " ".join(section_text)
-
-        for section in self.sections:
-            section_text = section.title + "\n" + section.text
-            if section_text.strip():
-                components.append(section_text)
-
-        return "\n\n".join(components)
+        return "\n\n".join(self.sections) if self.sections else ""
