@@ -7,3 +7,4 @@ tomlkit
 pydantic_settings
 backoff
 tenacity
+notebook
