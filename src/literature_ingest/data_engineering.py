@@ -1,6 +1,5 @@
 from pathlib import Path
 import tarfile
-import tempfile
 from typing import List
 
 from functools import wraps
