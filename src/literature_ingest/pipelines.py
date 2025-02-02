@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import List
 
 from literature_ingest.data_engineering import unzip_and_filter
-from literature_ingest.models import ArticleType, Document
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.pubmed import PubMedParser
 from pydantic import BaseModel
