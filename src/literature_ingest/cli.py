@@ -320,13 +320,7 @@ def ingest_pubmed_sample(file_names: List[str]):
     print("DONE: Download Pubmed data")
 
     # Unzip data
-    print(f"Unzipping {raw_dir}...")
-    for file in baseline_files_downloaded:
-        print(f"Unzipping {file}...")
-        unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
-        print(f"Unzipped {len(unzipped_files_list)} files...")
-    print(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} files...")
-    unzipped_files_list = list(unzipped_dir.glob("*.xml"))
+    unzipped_files_list = pipeline_unzip_pubmed(baseline_files_downloaded, unzipped_dir)
 
     # Parse data
     print("Parsing PubMed data..." )

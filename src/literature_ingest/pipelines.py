@@ -95,3 +95,21 @@ def pipeline_parse_pubmed(unzipped_files: List[Path], parsed_dir: Path = Path("d
     print("DONE: Parse PubMed data")
     parser.print_article_type_distribution()
     return parsed_files
+
+
+def pipeline_unzip_pubmed(
+    files_for_unzipping: List[Path],
+    unzipped_dir: Path = Path("data/pipelines/pubmed/unzipped/"),
+):
+    # Create directories
+    unzipped_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Unzipping {len(files_for_unzipping)} files...")
+    for file in files_for_unzipping:
+        print(f"Unzipping {file}...")
+        unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
+        print(f"Unzipped {len(unzipped_files_list)} files...")
+    print(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} XML files...")
+
+    unzipped_files_list = list(unzipped_dir.glob("*.xml"))
+    return unzipped_files_list
