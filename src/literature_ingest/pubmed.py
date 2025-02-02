@@ -8,7 +8,7 @@ from typing import List
 import xml.etree.ElementTree as ET
 import backoff
 
-from literature_ingest.models import ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, PUBMED_PUBLICATION_TYPE_MAP
+from literature_ingest.models import ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, PUBMED_PUBLICATION_TYPE_MAP, Section
 from literature_ingest.normalization import normalize_document
 from literature_ingest.utils.logging import log
 
@@ -228,12 +228,12 @@ class PubMedParser:
 
         documents = []
         for article in articles:
-            doc = self._parse_docs_sync(article)
+            doc = self._parse_doc(article)
             documents.append(doc)
 
         return documents
 
-    def _parse_docs_sync(self, article: ET.Element) -> Document:
+    def _parse_doc(self, article: ET.Element) -> Document:
         # Get article type from publication types
         article_type = self._determine_article_type(article)
         medline_citation = article.find(".//MedlineCitation")
@@ -256,8 +256,10 @@ class PubMedParser:
         ids = self._reorder_ids(ids)
 
         # Get title
+        sections = []
         title_elem = medline_citation.find(".//ArticleTitle")
-        title = title_elem.text if title_elem is not None else "Untitled Article"
+        title = title_elem.text if title_elem is not None else ""
+        sections.append(Section(name="title", text=title))
 
         # Get journal metadata
         journal = medline_citation.find(".//Journal")
@@ -272,7 +274,13 @@ class PubMedParser:
 
         # Get abstract
         abstract_elem = medline_citation.find(".//Abstract/AbstractText")
-        abstract = abstract_elem.text if abstract_elem is not None else None
+        abstract = abstract_elem.text if abstract_elem is not None else ""
+        sections.append(
+            Section(
+                name="abstract",
+                text=abstract,
+            )
+        )
 
         # Get keywords from MeSH terms
         medlineCitation = article.find(".//MedlineCitation")
@@ -283,13 +291,12 @@ class PubMedParser:
 
         return Document(
             ids=ids,
-            title=title,
             type=article_type,
             journal=journal_metadata,
             year=publication_year,
             publication_dates=publication_dates,
-            abstract=abstract,
             keywords=keywords,
+            sections=sections,
             authors=authors,
             subject_groups=subject_groups,
             parsed_date=datetime.now(timezone.utc)
