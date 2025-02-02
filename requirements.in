@@ -8,3 +8,6 @@ pydantic_settings
 backoff
 tenacity
 notebook
+openai
+scikit-learn
+pandas
