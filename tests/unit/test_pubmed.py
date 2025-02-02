@@ -18,11 +18,11 @@ def test_parse_doc_basic_fields(pubmed_doc):
         DocumentId(id="10.1016/0006-2944(75)90147-7", type="doi"),
     ]
     assert doc.synthetic_id == "type=pubmed;id=1&type=doi;id=10.1016/0006-2944(75)90147-7"
+    assert doc.type == ArticleType.RESEARCH_ARTICLE
 
     # Test basic metadata
     assert doc.sections[0].name == "title"
     assert doc.sections[0].text == "Formate assay in body fluids: application in methanol poisoning."
-    assert doc.type == ArticleType.RESEARCH_ARTICLE
 
     assert doc.publication_dates.collection_date == "1975-6"
 
