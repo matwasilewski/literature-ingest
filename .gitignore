@@ -11,3 +11,4 @@ secrets/*
 data/*
 .DS_Store
 tests/resources/json_versions/*
+notebooks/.ipynb_checkpoints/*
