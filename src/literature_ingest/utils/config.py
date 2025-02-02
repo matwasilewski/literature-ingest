@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     PROD_BUCKET: Optional[str] = None
     SYSLOG_ADDR: Optional[Path] = None
 
+    OPENAI_API_KEY: Optional[str] = None
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
