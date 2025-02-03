@@ -464,10 +464,7 @@ class PMCParser:
         return " ".join(texts)
 
     def _extract_sections(self, body_elem, parent_section=None) -> List[Section]:
-        """Extract sections from the document body, incorporating subsection content into parent sections"""
         sections = []
-
-        # If we're parsing the body element itself, look for direct sec elements
         xpath = "./sec" if parent_section is None else ".//sec"
 
         for sec in body_elem.findall(xpath):
@@ -475,16 +472,17 @@ class PMCParser:
             title_elem = sec.find("title")
             section_name = title_elem.text if title_elem is not None else ""
 
-
-            # Get section text content
+            # Get section text content - Initialize with empty string instead of None
             text = ""
-            text += section_name + "\n"
-            text += self._extract_section_text(sec)
+            # Only add section name if it exists
+            if section_name:
+                text += section_name + "\n"
+            section_text = self._extract_section_text(sec)
+            if section_text:
+                text += section_text
 
-            if text is None:
+            if not text.strip():  # Skip empty sections
                 continue
-
-            text = text.strip()
 
             # Process direct subsections and add their content to the parent section's text
             for subsec in sec.findall("./sec"):
@@ -493,16 +491,20 @@ class PMCParser:
                 subsec_text = self._extract_section_text(subsec)
 
                 if subsec_text:
-                    text += f"\n\n{subsec_title_text}\n{subsec_text}"
-                text = text.strip()
+                    if subsec_title_text:
+                        text += f"\n\n{subsec_title_text}\n{subsec_text}"
+                    else:
+                        text += f"\n\n{subsec_text}"
 
-            # Create section object (note: removed subsections field)
-            section = Section(
-                name=section_name,
-                text=text
-            )
+            text = text.strip()
 
-            sections.append(section)
+            # Create section object only if there's content
+            if text:
+                section = Section(
+                    name=section_name,
+                    text=text
+                )
+                sections.append(section)
 
         return sections
 
