@@ -397,6 +397,7 @@ def test_document_load_from_json():
     "pmc_doc_7",
     "pmc_doc_8",
     "pmc_doc_9",
+    "pmc_doc_10",
 ])
 def test_parse_doc_with_error(request, pmc_doc_fixture):
     parser = PMCParser()

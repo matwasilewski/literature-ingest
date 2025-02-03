@@ -470,7 +470,7 @@ class PMCParser:
         for sec in body_elem.findall(xpath):
             # Get section title
             title_elem = sec.find("title")
-            section_name = title_elem.text if title_elem is not None else ""
+            section_name = title_elem.text if (title_elem is not None and title_elem.text) else ""
 
             # Get section text content - Initialize with empty string instead of None
             text = ""
