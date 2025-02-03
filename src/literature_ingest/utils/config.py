@@ -72,10 +72,22 @@ class Settings(BaseSettings):
         case_sensitive = True
         secrets_dir = "secrets"
 
+def get_project_root() -> Path:
+    """Find the project root directory by looking for pyproject.toml"""
+    current = Path(__file__).resolve().parent
+    while current != current.parent:
+        if (current / "pyproject.toml").exists():
+            return current
+        current = current.parent
+    print(current)
+    raise FileNotFoundError("Could not find project root (pyproject.toml)")
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings(_env_file=f"{Path.cwd()}/.env")
-
+    project_root = get_project_root()
+    return Settings(
+        _env_file=str(project_root / ".env"),
+        _secrets_dir=str(project_root / "secrets")
+    )
 
 settings = get_settings()
