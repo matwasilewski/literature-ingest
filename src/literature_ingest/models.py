@@ -125,10 +125,25 @@ class PublicationDates(BaseModel):
             if value is not None
         ]
 
+
+class AnnotationType(str, Enum):
+    """Standardized annotation types used internally"""
+    GENE = "Gene"
+    DRUG = "Drug"
+    DISEASE = "Disease"
+
+
+class Annotation(BaseModel):
+    """Represents an annotation in the document"""
+    start: int
+    end: int
+    type: AnnotationType
+
 class Section(BaseModel):
     """Represents a section in the document"""
     name: str
     text: str
+    annotations: List[Annotation] = []
 
     class Config:
         extra = "forbid"
