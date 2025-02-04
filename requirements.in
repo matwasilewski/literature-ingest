@@ -11,3 +11,5 @@ notebook
 openai
 scikit-learn
 pandas
+transformers
+torch
