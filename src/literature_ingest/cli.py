@@ -198,15 +198,31 @@ def pipelines():
     pass
 
 @pipelines.command()
-def ingest_pmc():
-    """Ingest PMC data."""
-    click.echo("Ingesting PMC data...")
+@click.option(
+    "--sample",
+    is_flag=True,
+    help="Run sample ingestion with specific files",
+)
+@click.option(
+    "--file-names",
+    default=['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz'],
+    help="File names to download (only used with --sample)",
+    type=str,
+    multiple=True,
+)
+def ingest_pmc(sample: bool, file_names: List[str]):
+    """Ingest PMC data. Use --sample flag for sample ingestion."""
+    if sample:
+        click.echo("Ingesting PMC sample data...")
+        base_dir = Path("data/pipelines/sample_pmc")
+    else:
+        click.echo("Ingesting PMC data...")
+        base_dir = Path("data/pipelines/pmc")
 
     # Define directories
-    raw_dir: Path = Path("data/pipelines/pmc/raw/")
-    unzipped_dir: Path = Path("data/pipelines/pmc/unzipped/")
-    parsed_dir: Path = Path("data/pipelines/pmc/parsed/")
-
+    raw_dir = base_dir / "raw"
+    unzipped_dir = base_dir / "unzipped"
+    parsed_dir = base_dir / "parsed"
 
     # Create directories
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -217,10 +233,15 @@ def ingest_pmc():
     pmc_downloader = PMCFTPClient()
 
     click.echo("Downloading PMC baselines...")
-    baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir)
-    click.echo("Downloading PMC incremental...")
-    incremental_files_downloaded = pmc_downloader._download_pmc_incremental(raw_dir)
-    click.echo(f"Downloaded {len(baseline_files_downloaded)} files...")
+    if sample:
+        baseline_files_downloaded = pmc_downloader._download_pmc_baselines_sample(raw_dir, file_names=file_names)
+        incremental_files_downloaded = []
+    else:
+        baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir)
+        click.echo("Downloading PMC incremental...")
+        incremental_files_downloaded = pmc_downloader._download_pmc_incremental(raw_dir)
+
+    click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} files...")
     click.echo("DONE: Download PMC data")
 
     # Unzip data
@@ -239,55 +260,7 @@ def ingest_pmc():
     click.echo(f"Parsed {len(parsed_files)} files...")
     click.echo("DONE: Parse PMC data")
 
-
-    click.echo("DONE: Ingest PMC data")
-
-
-@pipelines.command()
-@click.option(
-    "--file-names",
-    default=['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz'],
-    help="File names to download",
-    type=str,
-    multiple=True,
-)
-def ingest_pmc_sample(file_names: List[str]):
-    """Ingest PMC sample data."""
-    click.echo("Ingesting PMC sample data...")
-    raw_dir=Path("data/pipelines/sample_pmc/raw/")
-    unzipped_dir=Path("data/pipelines/sample_pmc/unzipped/")
-    parsed_dir=Path("data/pipelines/sample_pmc/parsed/")
-
-    # Create directories
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    unzipped_dir.mkdir(parents=True, exist_ok=True)
-    parsed_dir.mkdir(parents=True, exist_ok=True)
-
-    # Download data
-    pmc_downloader = PMCFTPClient()
-
-    click.echo("Downloading PMC baselines...")
-    baseline_files_downloaded = pmc_downloader._download_pmc_baselines_sample(raw_dir, file_names=file_names)
-    click.echo(f"Downloaded {len(baseline_files_downloaded)} files...")
-    click.echo("DONE: Download PMC data")
-
-    # Unzip data
-    click.echo(f"Unzipping {raw_dir}...")
-    for file in baseline_files_downloaded:
-        click.echo(f"Unzipping {file}...")
-        unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
-        click.echo(f"Unzipped {len(unzipped_files_list)} files...")
-    click.echo(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} files...")
-
-    # Parse data
-    unzipped_files_list = list(unzipped_dir.glob("*.xml"))
-    click.echo("Parsing PMC data..." )
-    parsed_files = pipeline_parse_pmc(unzipped_files_list, parsed_dir)
-    click.echo(f"Parsed {len(parsed_files)} files...")
-    click.echo("DONE: Parse PMC data")
-
-    click.echo("DONE: Ingest PMC sample data")
-
+    click.echo(f"DONE: Ingest PMC {'sample ' if sample else ''}data")
 
 @pipelines.command()
 @click.option(
