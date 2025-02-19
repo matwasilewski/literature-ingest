@@ -7,6 +7,10 @@ from literature_ingest.normalization import normalize_document
 from literature_ingest.pipelines import pipeline_download_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pmc, pipeline_parse_pubmed, pipeline_unzip_pubmed
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.utils.logging import get_logger
+from literature_ingest.utils.config import settings
+
+import subprocess
+import shutil
 
 logger = get_logger(__name__, "info")
 
@@ -210,7 +214,12 @@ def pipelines():
     type=str,
     multiple=True,
 )
-def ingest_pmc(sample: bool, file_names: List[str]):
+@click.option(
+    "--save-space",
+    is_flag=True,
+    help="Save space by deleting downloaded files after ingestion",
+)
+def ingest_pmc(sample: bool, file_names: List[str], save_space: bool):
     """Ingest PMC data. Use --sample flag for sample ingestion."""
     if sample:
         click.echo("Ingesting PMC sample data...")
@@ -246,19 +255,48 @@ def ingest_pmc(sample: bool, file_names: List[str]):
 
     # Unzip data
     click.echo(f"Unzipping {raw_dir}...")
+    all_unzipped_files = []
+
     for file in baseline_files_downloaded + incremental_files_downloaded:
         click.echo(f"Unzipping {file}...")
-        unzipped_files_list = unzip_and_filter(file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
-        click.echo(f"Unzipped {len(unzipped_files_list)} files...")
-    click.echo(f"Unzipped {unzipped_dir}, to the total of {len(list(unzipped_dir.glob('*.xml')))} files...")
+        # Create a subdirectory using the file's stem (name without extension)
+        file_unzip_dir = unzipped_dir / Path(file).stem
+        file_unzip_dir.mkdir(parents=True, exist_ok=True)
+
+        unzipped_files_list = unzip_and_filter(file, file_unzip_dir, extension=".xml", use_gsutil=False, overwrite=True)
+        all_unzipped_files.extend(unzipped_files_list)
+        click.echo(f"Unzipped {len(unzipped_files_list)} files to {file_unzip_dir}...")
+
+        click.echo("Parsing PMC data..." )
+        updated_unzipped_files_list = list(file_unzip_dir.glob("*.xml"))
+        file_parsed_dir = parsed_dir / Path(file).stem
+        file_parsed_dir.mkdir(parents=True, exist_ok=True)
+
+        parsed_files = pipeline_parse_pmc(updated_unzipped_files_list, file_parsed_dir)
+        click.echo(f"Parsed {len(parsed_files)} files...")
+        click.echo("DONE: Parse PMC data")
+
+        if save_space:
+            click.echo(f"Deleting {file}...")
+            # Upload unzipped files to GCP
+            click.echo(f"Uploading unzipped files from {file_unzip_dir} to GCP...")
+            upload_cmd = f"gsutil -m cp -r {file_unzip_dir}/* gs://{settings.PROD_BUCKET}/pmc/unzipped/"
+            subprocess.run(upload_cmd, shell=True, check=True)
+
+            # Upload parsed files to GCP
+            click.echo(f"Uploading parsed files from {file_parsed_dir} to GCP...")
+            upload_cmd = f"gsutil -m cp -r {file_parsed_dir}/* gs://{settings.PROD_BUCKET}/pmc/parsed/"
+            subprocess.run(upload_cmd, shell=True, check=True)
+
+            # Clean up local directories
+            shutil.rmtree(file_unzip_dir)
+            shutil.rmtree(file_parsed_dir)
+            click.echo(f"Deleted file's {file} processed contents...")
+
+    click.echo(f"Unzipped all files to {unzipped_dir}, total of {len(all_unzipped_files)} files...")
     click.echo("DONE: Unzip PMC data")
 
     # Parse data
-    click.echo("Parsing PMC data..." )
-    unzipped_files_list = list(unzipped_dir.glob("*.xml"))
-    parsed_files = pipeline_parse_pmc(unzipped_files_list, parsed_dir)
-    click.echo(f"Parsed {len(parsed_files)} files...")
-    click.echo("DONE: Parse PMC data")
 
     click.echo(f"DONE: Ingest PMC {'sample ' if sample else ''}data")
 
@@ -345,6 +383,7 @@ def ingest_pubmed(sample: bool, file_names: List[str], unzip_all: bool, parse_al
     click.echo("DONE: Parse PubMed data")
 
     click.echo(f"DONE: Ingest PubMed {'sample ' if sample else ''}data")
+
 
 @pipelines.command()
 @click.option(
