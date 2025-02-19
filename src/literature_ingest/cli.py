@@ -11,6 +11,7 @@ from literature_ingest.utils.config import settings
 
 import subprocess
 import shutil
+from google.cloud import storage
 
 logger = get_logger(__name__, "info")
 
@@ -285,15 +286,25 @@ def ingest_pmc(sample: bool, save_space: bool):
 
         if save_space:
             click.echo(f"Deleting {file}...")
-            # Upload unzipped files to GCP
-            click.echo(f"Uploading unzipped files from {file_unzip_dir} to GCP...")
-            upload_cmd = f"gsutil -m cp -r '{file_unzip_dir}/' 'gs://{settings.PROD_BUCKET}/pmc/unzipped/'"
-            subprocess.run(upload_cmd, shell=True, check=True)
+            # Upload files to GCS using client library
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(settings.PROD_BUCKET)
 
-            # Upload parsed files to GCP
-            click.echo(f"Uploading parsed files from {file_parsed_dir} to GCP...")
-            upload_cmd = f"gsutil -m cp -r '{file_parsed_dir}/' 'gs://{settings.PROD_BUCKET}/pmc/parsed/'"
-            subprocess.run(upload_cmd, shell=True, check=True)
+            # Upload unzipped files
+            click.echo(f"Uploading unzipped files from {file_unzip_dir} to GCS...")
+            for unzipped_file in file_unzip_dir.glob('**/*'):
+                if unzipped_file.is_file():
+                    blob_name = f"pmc/unzipped/{file_unzip_dir.name}/{unzipped_file.name}"
+                    blob = bucket.blob(blob_name)
+                    blob.upload_from_filename(str(unzipped_file))
+
+            # Upload parsed files
+            click.echo(f"Uploading parsed files from {file_parsed_dir} to GCS...")
+            for parsed_file in file_parsed_dir.glob('**/*'):
+                if parsed_file.is_file():
+                    blob_name = f"pmc/parsed/{file_parsed_dir.name}/{parsed_file.name}"
+                    blob = bucket.blob(blob_name)
+                    blob.upload_from_filename(str(parsed_file))
 
             # Clean up local directories
             shutil.rmtree(file_unzip_dir)
