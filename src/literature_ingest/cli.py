@@ -222,7 +222,7 @@ def upload_to_gcs_and_save_space(unzipped_dir: Path, parsed_dir: Path):
     unzipped_files = [f for f in unzipped_files if f.is_file()]
 
     max_workers = 60  # Increased for I/O bound operations
-    upload_fn = partial(upload_file, bucket, "pmc/unzipped", unzipped_dir)
+    upload_fn = partial(upload_file, bucket, "pmc/unzipped/{unzipped_dir.name}")
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         results = list(tqdm(
@@ -240,7 +240,7 @@ def upload_to_gcs_and_save_space(unzipped_dir: Path, parsed_dir: Path):
     parsed_files = list(parsed_dir.glob('**/*'))
     parsed_files = [f for f in parsed_files if f.is_file()]
 
-    upload_fn = partial(upload_file, bucket, "pmc/parsed", parsed_dir)
+    upload_fn = partial(upload_file, bucket, "pmc/parsed")
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         results = list(tqdm(
@@ -472,9 +472,9 @@ def parse_missing_files_in_pmc(file_list: Optional[str]):
 
         raise click.ClickException(f"Failed to parse some files, updated file list: {updated_file_list}")
 
-def upload_file(bucket, directory, file_unzip_dir, unzipped_file):
+def upload_file(bucket, directory, unzipped_file):
     try:
-        blob_name = f"{directory}/{file_unzip_dir.name}/{unzipped_file.name}"
+        blob_name = f"{directory}/{unzipped_file.name}"
         blob = bucket.blob(blob_name)
         blob.upload_from_filename(str(unzipped_file))
         return True
