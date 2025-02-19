@@ -13,6 +13,9 @@ import subprocess
 import shutil
 from google.cloud import storage
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+import logging
 
 logger = get_logger(__name__, "info")
 
@@ -204,6 +207,58 @@ def pipelines():
     pass
 
 @pipelines.command()
+@click.argument("unzipped_dir", type=click.Path(exists=True, file_okay=False))
+@click.argument("parsed_dir", type=click.Path(exists=True, file_okay=False))
+def upload_to_gcs_and_save_space(unzipped_dir: Path, parsed_dir: Path):
+    unzipped_dir = Path(unzipped_dir)
+    parsed_dir = Path(parsed_dir)
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(settings.PROD_BUCKET)
+
+    # Upload unzipped files
+    click.echo(f"Uploading unzipped files from {unzipped_dir} to GCS...")
+    start_time = datetime.datetime.now()
+    unzipped_files = list(unzipped_dir.glob('**/*'))
+    unzipped_files = [f for f in unzipped_files if f.is_file()]
+
+    max_workers = 60  # Increased for I/O bound operations
+    upload_fn = partial(upload_file, bucket, unzipped_dir)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(tqdm(
+            executor.map(upload_fn, unzipped_files),
+            total=len(unzipped_files),
+            desc="Uploading unzipped files"
+        ))
+
+    unzip_upload_time = datetime.datetime.now() - start_time
+    click.echo(f"Uploaded {len(unzipped_files)} unzipped files in {unzip_upload_time}")
+
+    # Upload parsed files
+    click.echo(f"Uploading parsed files from {parsed_dir} to GCS...")
+    start_time = datetime.datetime.now()
+    parsed_files = list(parsed_dir.glob('**/*'))
+    parsed_files = [f for f in parsed_files if f.is_file()]
+
+    upload_fn = partial(upload_file, bucket, parsed_dir)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(tqdm(
+            executor.map(upload_fn, parsed_files),
+            total=len(parsed_files),
+            desc="Uploading parsed files"
+        ))
+
+    parse_upload_time = datetime.datetime.now() - start_time
+    click.echo(f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}")
+
+    # Clean up local directories
+    shutil.rmtree(unzipped_dir)
+    shutil.rmtree(parsed_dir)
+    click.echo(f"Deleted file's {unzipped_dir} and {parsed_dir} processed contents...")
+
+
+@pipelines.command()
 @click.option(
     "--sample",
     is_flag=True,
@@ -286,47 +341,12 @@ def ingest_pmc(sample: bool, save_space: bool):
         click.echo("DONE: Parse PMC data")
 
         if save_space:
-            click.echo(f"Deleting {file}...")
-            # Upload files to GCS using client library
-            storage_client = storage.Client()
-            bucket = storage_client.bucket(settings.PROD_BUCKET)
-
-            # Upload unzipped files
-            click.echo(f"Uploading unzipped files from {file_unzip_dir} to GCS...")
-            start_time = datetime.datetime.now()
-            unzipped_files = list(file_unzip_dir.glob('**/*'))
-            unzipped_files = [f for f in unzipped_files if f.is_file()]
-
-            for unzipped_file in tqdm(unzipped_files, desc="Uploading unzipped files"):
-                blob_name = f"pmc/unzipped/{file_unzip_dir.name}/{unzipped_file.name}"
-                blob = bucket.blob(blob_name)
-                blob.upload_from_filename(str(unzipped_file))
-
-            unzip_upload_time = datetime.datetime.now() - start_time
-            click.echo(f"Uploaded {len(unzipped_files)} unzipped files in {unzip_upload_time}")
-
-            # Upload parsed files
-            click.echo(f"Uploading parsed files from {file_parsed_dir} to GCS...")
-            start_time = datetime.datetime.now()
-            parsed_files = list(file_parsed_dir.glob('**/*'))
-            parsed_files = [f for f in parsed_files if f.is_file()]
-
-            for parsed_file in tqdm(parsed_files, desc="Uploading parsed files"):
-                blob_name = f"pmc/parsed/{file_parsed_dir.name}/{parsed_file.name}"
-                blob = bucket.blob(blob_name)
-                blob.upload_from_filename(str(parsed_file))
-
-            parse_upload_time = datetime.datetime.now() - start_time
-            click.echo(f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}")
-
-            # Clean up local directories
-            shutil.rmtree(file_unzip_dir)
-            shutil.rmtree(file_parsed_dir)
-            click.echo(f"Deleted file's {file} processed contents...")
+            upload_to_gcs_and_save_space(unzipped_dir, parsed_dir)
 
     click.echo(f"Unzipped all files to {unzipped_dir}, total of {len(all_unzipped_files)} files...")
     click.echo("DONE: Unzip PMC data")
     click.echo(f"DONE: Ingest PMC {'sample ' if sample else ''}data")
+
 
 @pipelines.command()
 @click.option(
@@ -451,3 +471,13 @@ def parse_missing_files_in_pmc(file_list: Optional[str]):
             f.write("\n".join(failed_files))
 
         raise click.ClickException(f"Failed to parse some files, updated file list: {updated_file_list}")
+
+def upload_file(bucket, file_unzip_dir, unzipped_file):
+    try:
+        blob_name = f"pmc/unzipped/{file_unzip_dir.name}/{unzipped_file.name}"
+        blob = bucket.blob(blob_name)
+        blob.upload_from_filename(str(unzipped_file))
+        return True
+    except Exception as e:
+        logging.error(f"Failed to upload {unzipped_file}: {str(e)}")
+        return False
