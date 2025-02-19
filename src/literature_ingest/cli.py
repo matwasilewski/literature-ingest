@@ -208,18 +208,11 @@ def pipelines():
     help="Run sample ingestion with specific files",
 )
 @click.option(
-    "--file-names",
-    default=['oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz'],
-    help="File names to download (only used with --sample)",
-    type=str,
-    multiple=True,
-)
-@click.option(
     "--save-space",
     is_flag=True,
     help="Save space by deleting downloaded files after ingestion",
 )
-def ingest_pmc(sample: bool, file_names: List[str], save_space: bool):
+def ingest_pmc(sample: bool, save_space: bool):
     """Ingest PMC data. Use --sample flag for sample ingestion."""
     if sample:
         click.echo("Ingesting PMC sample data...")
@@ -240,24 +233,38 @@ def ingest_pmc(sample: bool, file_names: List[str], save_space: bool):
 
     # Download data
     pmc_downloader = PMCFTPClient()
+    SAMPLE_FILE_NAME = 'oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz'
 
-    click.echo("Downloading PMC baselines...")
+    click.echo("Downloading PMC...")
     if sample:
-        baseline_files_downloaded = pmc_downloader._download_pmc_baselines_sample(raw_dir, file_names=file_names)
+        click.echo("Downloading PMC Sample Files...")
+        baseline_files_downloaded = pmc_downloader._download_pmc_baselines_sample(raw_dir, file_names=[SAMPLE_FILE_NAME])
         incremental_files_downloaded = []
+
     else:
+        click.echo("Downloading PMC Baselines (full)...")
         baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir)
         click.echo("Downloading PMC incremental...")
         incremental_files_downloaded = pmc_downloader._download_pmc_incremental(raw_dir)
+        click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} files... Files already stored are not downloaded again and counter here.")
 
-    click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} files...")
     click.echo("DONE: Download PMC data")
+
+    # Get all files from raw directory instead of using download outputs
+    if sample:
+        # Sample files have a specific pattern
+        all_raw_files = [f for f in raw_dir.glob(f"**/{SAMPLE_FILE_NAME}") if f.is_file()]
+    else:
+        # For full ingestion, get all tar.gz files
+        all_raw_files = [f for f in raw_dir.glob("**.tar.gz") if f.is_file()]
+
+    click.echo(f"Found {len(all_raw_files)} files in raw directory for processing")
 
     # Unzip data
     click.echo(f"Unzipping {raw_dir}...")
     all_unzipped_files = []
 
-    for file in baseline_files_downloaded + incremental_files_downloaded:
+    for file in all_raw_files:
         click.echo(f"Unzipping {file}...")
         # Create a subdirectory using the file's stem (name without extension)
         file_unzip_dir = unzipped_dir / Path(file).stem
@@ -280,12 +287,12 @@ def ingest_pmc(sample: bool, file_names: List[str], save_space: bool):
             click.echo(f"Deleting {file}...")
             # Upload unzipped files to GCP
             click.echo(f"Uploading unzipped files from {file_unzip_dir} to GCP...")
-            upload_cmd = f"gsutil -m cp -r {file_unzip_dir}/* gs://{settings.PROD_BUCKET}/pmc/unzipped/"
+            upload_cmd = f"gsutil -m cp -r '{file_unzip_dir}/' 'gs://{settings.PROD_BUCKET}/pmc/unzipped/'"
             subprocess.run(upload_cmd, shell=True, check=True)
 
             # Upload parsed files to GCP
             click.echo(f"Uploading parsed files from {file_parsed_dir} to GCP...")
-            upload_cmd = f"gsutil -m cp -r {file_parsed_dir}/* gs://{settings.PROD_BUCKET}/pmc/parsed/"
+            upload_cmd = f"gsutil -m cp -r '{file_parsed_dir}/' 'gs://{settings.PROD_BUCKET}/pmc/parsed/'"
             subprocess.run(upload_cmd, shell=True, check=True)
 
             # Clean up local directories
@@ -295,9 +302,6 @@ def ingest_pmc(sample: bool, file_names: List[str], save_space: bool):
 
     click.echo(f"Unzipped all files to {unzipped_dir}, total of {len(all_unzipped_files)} files...")
     click.echo("DONE: Unzip PMC data")
-
-    # Parse data
-
     click.echo(f"DONE: Ingest PMC {'sample ' if sample else ''}data")
 
 @pipelines.command()
