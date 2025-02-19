@@ -12,6 +12,7 @@ from literature_ingest.utils.config import settings
 import subprocess
 import shutil
 from google.cloud import storage
+from tqdm import tqdm
 
 logger = get_logger(__name__, "info")
 
@@ -292,19 +293,31 @@ def ingest_pmc(sample: bool, save_space: bool):
 
             # Upload unzipped files
             click.echo(f"Uploading unzipped files from {file_unzip_dir} to GCS...")
-            for unzipped_file in file_unzip_dir.glob('**/*'):
-                if unzipped_file.is_file():
-                    blob_name = f"pmc/unzipped/{file_unzip_dir.name}/{unzipped_file.name}"
-                    blob = bucket.blob(blob_name)
-                    blob.upload_from_filename(str(unzipped_file))
+            start_time = datetime.datetime.now()
+            unzipped_files = list(file_unzip_dir.glob('**/*'))
+            unzipped_files = [f for f in unzipped_files if f.is_file()]
+
+            for unzipped_file in tqdm(unzipped_files, desc="Uploading unzipped files"):
+                blob_name = f"pmc/unzipped/{file_unzip_dir.name}/{unzipped_file.name}"
+                blob = bucket.blob(blob_name)
+                blob.upload_from_filename(str(unzipped_file))
+
+            unzip_upload_time = datetime.datetime.now() - start_time
+            click.echo(f"Uploaded {len(unzipped_files)} unzipped files in {unzip_upload_time}")
 
             # Upload parsed files
             click.echo(f"Uploading parsed files from {file_parsed_dir} to GCS...")
-            for parsed_file in file_parsed_dir.glob('**/*'):
-                if parsed_file.is_file():
-                    blob_name = f"pmc/parsed/{file_parsed_dir.name}/{parsed_file.name}"
-                    blob = bucket.blob(blob_name)
-                    blob.upload_from_filename(str(parsed_file))
+            start_time = datetime.datetime.now()
+            parsed_files = list(file_parsed_dir.glob('**/*'))
+            parsed_files = [f for f in parsed_files if f.is_file()]
+
+            for parsed_file in tqdm(parsed_files, desc="Uploading parsed files"):
+                blob_name = f"pmc/parsed/{file_parsed_dir.name}/{parsed_file.name}"
+                blob = bucket.blob(blob_name)
+                blob.upload_from_filename(str(parsed_file))
+
+            parse_upload_time = datetime.datetime.now() - start_time
+            click.echo(f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}")
 
             # Clean up local directories
             shutil.rmtree(file_unzip_dir)
