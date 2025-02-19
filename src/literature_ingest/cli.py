@@ -264,20 +264,40 @@ def ingest_pmc(sample: bool, file_names: List[str]):
 
 @pipelines.command()
 @click.option(
+    "--sample",
+    is_flag=True,
+    help="Run sample ingestion with specific files",
+)
+@click.option(
     "--file-names",
     default=['pubmed25n0001.xml.gz'],
-    help="File names to download",
+    help="File names to download (only used with --sample)",
     type=str,
     multiple=True,
 )
-def ingest_pubmed_sample(file_names: List[str]):
-    """Ingest PMC sample data."""
-    click.echo("Ingesting Pubmed sample data...")
+@click.option(
+    "--unzip-all",
+    is_flag=True,
+    help="Unzip all files (only used for full ingestion)",
+)
+@click.option(
+    "--parse-all",
+    is_flag=True,
+    help="Parse all files (only used for full ingestion)",
+)
+def ingest_pubmed(sample: bool, file_names: List[str], unzip_all: bool, parse_all: bool):
+    """Ingest PubMed data. Use --sample flag for sample ingestion."""
+    if sample:
+        click.echo("Ingesting PubMed sample data...")
+        base_dir = Path("data/pipelines/sample_pubmed")
+    else:
+        click.echo("Ingesting PubMed data...")
+        base_dir = Path("data/pipelines/pubmed")
 
     # Define directories
-    raw_dir=Path("data/pipelines/sample_pubmed/raw/")
-    unzipped_dir=Path("data/pipelines/sample_pubmed/unzipped/")
-    parsed_dir=Path("data/pipelines/sample_pubmed/parsed/")
+    raw_dir = base_dir / "raw"
+    unzipped_dir = base_dir / "unzipped"
+    parsed_dir = base_dir / "parsed"
 
     # Create directories
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -286,73 +306,45 @@ def ingest_pubmed_sample(file_names: List[str]):
 
     # Download data
     pubmed_downloader = PubMedFTPClient()
-    print("Downloading Pubmed baselines...")
-    baseline_files_downloaded = pubmed_downloader._download_pubmed_baselines_sample(raw_dir, file_names=file_names)
-    print(f"Downloaded {len(baseline_files_downloaded)} files...")
-    print("DONE: Download Pubmed data")
+    click.echo("Downloading PubMed baselines...")
+
+    if sample:
+        baseline_files_downloaded = pubmed_downloader._download_pubmed_baselines_sample(raw_dir, file_names=file_names)
+        baseline_date = None
+    else:
+        baseline_files_downloaded, baseline_date = pipeline_download_pubmed(raw_dir)
+        dated_raw_dir = raw_dir / baseline_date if baseline_date else raw_dir
+
+    click.echo(f"Downloaded {len(baseline_files_downloaded)} files...")
+    click.echo("DONE: Download PubMed data")
 
     # Unzip data
-    unzipped_files_list = pipeline_unzip_pubmed(baseline_files_downloaded, unzipped_dir)
-
-    # Parse data
-    print("Parsing PubMed data..." )
-    parsed_files = pipeline_parse_pubmed(unzipped_files_list, parsed_dir)
-    print(f"Parsed {len(parsed_files)} files...")
-    print("DONE: Parse PubMed data")
-    click.echo("DONE: Ingest Pubmed sample data")
-
-
-@pipelines.command()
-@click.option(
-    "--unzip-all",
-    is_flag=True,
-    help="Unzip all files",
-)
-@click.option(
-    "--parse-all",
-    is_flag=True,
-    help="Parse all files",
-)
-def ingest_pubmed(unzip_all: bool, parse_all: bool):
-    """Ingest Pubmed data."""
-    click.echo("Ingesting Pubmed data...")
-
-    raw_dir= Path("data/pipelines/pubmed/raw/")
-    unzipped_dir = Path("data/pipelines/pubmed/unzipped/")
-    parsed_dir = Path("data/pipelines/pubmed/parsed/")
-
-    # Create directories
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    unzipped_dir.mkdir(parents=True, exist_ok=True)
-    parsed_dir.mkdir(parents=True, exist_ok=True)
-
-    # Download data
-    baseline_files_downloaded, baseline_date = pipeline_download_pubmed(raw_dir)
-
-    dated_raw_dir = raw_dir / baseline_date
-
-    # Unzip data
-    if unzip_all:
-        print("Using unzip_all=True, unzipping all files...")
+    if not sample and unzip_all:
+        click.echo("Using unzip_all=True, unzipping all files...")
         # get all files from the raw directory
-        files_for_unzipping = list(dated_raw_dir.glob("*.gz"))
-        print(f"Found {len(files_for_unzipping)} files to unzip...")
+        files_for_unzipping = list((dated_raw_dir if baseline_date else raw_dir).glob("*.gz"))
+        click.echo(f"Found {len(files_for_unzipping)} files to unzip...")
     else:
         files_for_unzipping = baseline_files_downloaded
 
     unzipped_files_list = pipeline_unzip_pubmed(files_for_unzipping, unzipped_dir)
+    click.echo(f"Unzipped {len(unzipped_files_list)} files...")
+    click.echo("DONE: Unzip PubMed data")
 
-    # Unzip data
-    if parse_all:
-        print("Using parse_all=True, parsing all files...")
+    # Parse data
+    if not sample and parse_all:
+        click.echo("Using parse_all=True, parsing all files...")
         files_for_parsing = list(unzipped_dir.glob("*.xml"))
-        print(f"Found {len(files_for_parsing)} files to parse...")
+        click.echo(f"Found {len(files_for_parsing)} files to parse...")
     else:
         files_for_parsing = unzipped_files_list
 
+    click.echo("Parsing PubMed data...")
     parsed_files = pipeline_parse_pubmed(files_for_parsing, parsed_dir)
+    click.echo(f"Parsed {len(parsed_files)} files...")
+    click.echo("DONE: Parse PubMed data")
 
-    click.echo("DONE: Ingest Pubmed data")
+    click.echo(f"DONE: Ingest PubMed {'sample ' if sample else ''}data")
 
 @pipelines.command()
 @click.option(
