@@ -17,6 +17,9 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 import logging
+import csv
+import pandas as pd
+from itertools import islice
 
 logger = get_logger(__name__, "info")
 
@@ -81,58 +84,6 @@ def parse_pmc(input_dir: str, output_dir: str):
     except Exception as e:
         logger.error(f"Error processing documents: {str(e)}")
         raise click.ClickException(str(e))
-
-
-@pipelines.command()
-@click.argument("unzipped_dir", type=click.Path(exists=True, dir_okay=False))
-@click.argument("parsed_dir", type=click.Path(exists=True, file_okay=False))
-def upload_to_gcs_and_save_space(unzipped_dir: Path, parsed_dir: Path):
-    unzipped_dir = Path(unzipped_dir)
-    parsed_dir = Path(parsed_dir)
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(settings.PROD_BUCKET)
-
-    # Upload unzipped files
-    click.echo(f"Uploading unzipped files from {unzipped_dir} to GCS...")
-    start_time = datetime.datetime.now()
-    unzipped_files = list(unzipped_dir.glob('**/*'))
-    unzipped_files = [f for f in unzipped_files if f.is_file()]
-
-    max_workers = 60  # Increased for I/O bound operations
-    upload_fn = partial(upload_file, bucket, "pmc/unzipped/{unzipped_dir.name}")
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        results = list(tqdm(
-            executor.map(upload_fn, unzipped_files),
-            total=len(unzipped_files),
-            desc="Uploading unzipped files"
-        ))
-
-    unzip_upload_time = datetime.datetime.now() - start_time
-    click.echo(f"Uploaded {len(unzipped_files)} unzipped files in {unzip_upload_time}")
-
-    # Upload parsed files
-    click.echo(f"Uploading parsed files from {parsed_dir} to GCS...")
-    start_time = datetime.datetime.now()
-    parsed_files = list(parsed_dir.glob('**/*'))
-    parsed_files = [f for f in parsed_files if f.is_file()]
-
-    upload_fn = partial(upload_file, bucket, "pmc/parsed")
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        results = list(tqdm(
-            executor.map(upload_fn, parsed_files),
-            total=len(parsed_files),
-            desc="Uploading parsed files"
-        ))
-
-    parse_upload_time = datetime.datetime.now() - start_time
-    click.echo(f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}")
-
-    # Clean up local directories
-    shutil.rmtree(unzipped_dir)
-    shutil.rmtree(parsed_dir)
-    click.echo(f"Deleted file's {unzipped_dir} and {parsed_dir} processed contents...")
 
 
 @cli.command()
@@ -280,13 +231,136 @@ def upload_file(bucket, directory, unzipped_file):
         return False
 
 
-"""
-1. Download everything from PMC
-THIS IS A LOOP
-    2. Unzip every archive file downloaded from PMC, into a respective folder
-    3. Parse every xml file in the respective folder, into a new folder
-    4. Extract ids from every json file in the parsed folder
-    5. Upload every unzipped file to GCS
-    6. Upload every parsed file to GCS
-    7. Delete the unzipped and parsed folders
-"""
+@cli.command()
+@click.argument("batch_size", type=int, default=1)
+@click.option("--metadata-file", type=click.Path(dir_okay=False), default="pmc_metadata.csv")
+def process_pmc(batch_size: int, metadata_file: str):
+    """Process PMC data in batches and extract metadata."""
+    click.echo("Processing PMC data...")
+    base_dir = Path("data/pipelines/pmc")
+    raw_dir = base_dir / "raw"
+
+    # Create directories
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    click.echo("Downloading PMC data...")
+    pmc_downloader = PMCFTPClient()
+    baseline_files = pmc_downloader._download_pmc_baselines(raw_dir, dry_run=False, overwrite=False)
+    incremental_files = pmc_downloader._download_pmc_incremental(raw_dir, dry_run=False, overwrite=False)
+    click.echo(f"Downloaded {len(baseline_files) + len(incremental_files)} files")
+
+    # Process files in batches
+    archive_files = list(raw_dir.glob("*.tar.gz"))
+    metadata_records = []
+
+    # Initialize GCS client
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(settings.PROD_BUCKET)
+    max_workers = 60  # Increased for I/O bound operations
+
+    # Get bucket name for constructing gs:// paths
+    bucket_name = settings.PROD_BUCKET
+
+    for i in range(0, len(archive_files), batch_size):
+        batch = archive_files[i:i + batch_size]
+        click.echo(f"\nProcessing batch {i//batch_size + 1}/{(len(archive_files) + batch_size - 1)//batch_size}")
+
+        for archive_file in batch:
+            click.echo(f"\nProcessing {archive_file.name}")
+
+            # Create batch-specific directories
+            batch_dir = base_dir / "batches" / archive_file.stem
+            unzipped_dir = batch_dir / "unzipped"
+            parsed_dir = batch_dir / "parsed"
+
+            unzipped_dir.mkdir(parents=True, exist_ok=True)
+            parsed_dir.mkdir(parents=True, exist_ok=True)
+
+            # Unzip
+            click.echo("Unzipping...")
+            unzipped_files = unzip_and_filter(archive_file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
+            click.echo(f"Unzipped {len(unzipped_files)} files")
+
+            # Parse
+            click.echo("Parsing...")
+            xml_files = list(unzipped_dir.glob("*.xml"))
+            parsed_files = pipeline_parse_pmc(xml_files, parsed_dir)
+            click.echo(f"Parsed {len(parsed_files)} files")
+
+            # Extract metadata and store GCS paths
+            click.echo("Extracting metadata...")
+            for json_file in parsed_dir.glob("*.json"):
+                with open(json_file, "r") as f:
+                    doc = Document.model_validate_json(f.read())
+                doc_ids = doc.get_ids()
+
+                # Construct GCS paths
+                parsed_gcs_path = f"gs://{bucket_name}/pmc/parsed/{json_file.name}"
+                xml_name = json_file.stem + ".xml"  # Original XML file name
+                unzipped_gcs_path = f"gs://{bucket_name}/pmc/unzipped/{archive_file.stem}/{xml_name}"
+
+                metadata_records.append({
+                    "pmid": doc_ids.pmid,
+                    "pmcid": doc_ids.pmcid,
+                    "doi": doc_ids.doi,
+                    "filename": json_file.name,
+                    "title": doc.title,
+                    "year": doc.year,
+                    "archive_file": archive_file.name,
+                    "parsed_gcs_path": parsed_gcs_path,
+                    "unzipped_gcs_path": unzipped_gcs_path
+                })
+
+            # Upload to GCS
+            click.echo("Uploading files to GCS...")
+            start_time = datetime.datetime.now()
+
+            # Upload unzipped files - maintain archive structure
+            unzipped_files = list(unzipped_dir.glob('**/*'))
+            unzipped_files = [f for f in unzipped_files if f.is_file()]
+
+            # Create partial function for unzipped files with archive-specific directory
+            unzipped_upload_fn = partial(
+                upload_file,
+                bucket,
+                f"pmc/unzipped/{archive_file.stem}"
+            )
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                results = list(tqdm(
+                    executor.map(unzipped_upload_fn, unzipped_files),
+                    total=len(unzipped_files),
+                    desc="Uploading unzipped files"
+                ))
+
+            unzip_upload_time = datetime.datetime.now() - start_time
+            click.echo(f"Uploaded {len(unzipped_files)} unzipped files in {unzip_upload_time}")
+
+            # Upload parsed files - flat directory
+            start_time = datetime.datetime.now()
+            parsed_files = list(parsed_dir.glob('**/*'))
+            parsed_files = [f for f in parsed_files if f.is_file()]
+
+            parsed_upload_fn = partial(upload_file, bucket, "pmc/parsed")
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                results = list(tqdm(
+                    executor.map(parsed_upload_fn, parsed_files),
+                    total=len(parsed_files),
+                    desc="Uploading parsed files"
+                ))
+
+            parse_upload_time = datetime.datetime.now() - start_time
+            click.echo(f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}")
+
+            # Cleanup local directories
+            shutil.rmtree(unzipped_dir)
+            shutil.rmtree(parsed_dir)
+            click.echo(f"Cleaned up local directories: {unzipped_dir} and {parsed_dir}")
+
+        # Save metadata after each batch
+        df = pd.DataFrame(metadata_records)
+        df.to_csv(metadata_file, index=False)
+        click.echo(f"Saved metadata for {len(metadata_records)} documents to {metadata_file}")
+
+    click.echo("\nAll processing complete!")
