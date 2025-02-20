@@ -1,7 +1,7 @@
 import datetime
 from pathlib import Path
 from typing import List, Optional, Union
-from xml.dom.minidom import Document
+
 import click
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.normalization import normalize_document
@@ -9,6 +9,8 @@ from literature_ingest.pipelines import pipeline_download_pubmed, pipeline_parse
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.utils.logging import get_logger
 from literature_ingest.utils.config import settings
+from literature_ingest.models import Document
+
 import supabase
 
 import shutil
@@ -20,6 +22,7 @@ import logging
 import csv
 import pandas as pd
 from itertools import islice
+import json
 
 logger = get_logger(__name__, "info")
 
@@ -154,14 +157,21 @@ def data_extraction(input_dir: Path, batch_size: int):
         ),
     )
 
+    def get_id_by_type(ids, id_type):
+        """Helper function to get ID value by type"""
+        for doc_id in ids:
+            if doc_id.type == id_type:
+                return doc_id.id
+        return None
+
     for file in input_dir.glob("*.json"):
         with open(file, "r") as f:
             doc = Document.model_validate_json(f.read())
-        doc_ids = doc.get_ids()
+
         records.append({
-            "pmid": doc_ids.pmid,
-            "pmcid": doc_ids.pmcid,
-            "doi": doc_ids.doi,
+            "pmid": get_id_by_type(doc.ids, "pubmed"),
+            "pmcid": get_id_by_type(doc.ids, "pmc"),
+            "doi": get_id_by_type(doc.ids, "doi"),
             "filename": file.name,
             "title": doc.title,
             "year": doc.year,
@@ -246,11 +256,19 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
     base_dir = Path("data/pipelines/pmc")
 
     # Process files in batches
-    archive_files = list(input_dir.glob("*.tar.gz"))
+    archive_files = list(input_dir.glob("**/*.tar.gz"))
     if not archive_files:
         raise click.ClickException(f"No .tar.gz files found in {input_dir}")
 
     click.echo(f"Found {len(archive_files)} archive files to process")
+
+
+    def get_id_by_type(ids, id_type):
+        """Helper function to get ID value by type"""
+        for doc_id in ids:
+            if doc_id.type == id_type:
+                return doc_id.id
+        return None
 
     metadata_records = []
 
@@ -293,7 +311,6 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
             for json_file in parsed_dir.glob("*.json"):
                 with open(json_file, "r") as f:
                     doc = Document.model_validate_json(f.read())
-                doc_ids = doc.get_ids()
 
                 # Construct GCS paths
                 parsed_gcs_path = f"gs://{bucket_name}/pmc/parsed/{json_file.name}"
@@ -301,9 +318,9 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
                 unzipped_gcs_path = f"gs://{bucket_name}/pmc/unzipped/{archive_file.stem}/{xml_name}"
 
                 metadata_records.append({
-                    "pmid": doc_ids.pmid,
-                    "pmcid": doc_ids.pmcid,
-                    "doi": doc_ids.doi,
+                    "pmid": get_id_by_type(doc.ids, "pubmed"),
+                    "pmcid": get_id_by_type(doc.ids, "pmc"),
+                    "doi": get_id_by_type(doc.ids, "doi"),
                     "filename": json_file.name,
                     "title": doc.title,
                     "year": doc.year,
