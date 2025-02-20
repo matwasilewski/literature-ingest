@@ -1,6 +1,8 @@
 import datetime
+import json
 from pathlib import Path
 from typing import List, Optional, Union
+from xml.dom.minidom import Document
 import click
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.normalization import normalize_document
@@ -8,6 +10,7 @@ from literature_ingest.pipelines import pipeline_download_pubmed, pipeline_parse
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.utils.logging import get_logger
 from literature_ingest.utils.config import settings
+import supabase
 
 import subprocess
 import shutil
@@ -281,6 +284,87 @@ def download_pmc():
     click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} "
                "files... Files already stored are not downloaded again and counter here.")
 
+@cli.command()
+@click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
+def unzip_and_parse_pubmed(input_dir: Path):
+    """Unzip and parse PubMed data."""
+    input_dir = Path(input_dir)
+    click.echo("Unzipping and parsing PubMed data...")
+    base_dir = Path("data/pipelines/pubmed")
+
+    unzipped_dir = base_dir / "unzipped" / input_dir.name
+    parsed_dir = base_dir / "parsed"
+
+    unzipped_dir.mkdir(parents=True, exist_ok=True)
+    parsed_dir.mkdir(parents=True, exist_ok=True)
+
+    unzipped_files = unzip_and_filter(input_dir, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
+    click.echo(f"Unzipped {len(unzipped_files)} files to {unzipped_dir}...")
+
+    # get all files from the unzipped directory
+    unzipped_files = list(unzipped_dir.glob("*.xml"))
+
+    parsed_files = pipeline_parse_pubmed(unzipped_files, parsed_dir)
+    click.echo(f"Parsed {len(parsed_files)} files to {parsed_dir}...")
+
+
+@cli.command()
+@click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
+@click.option("--batch-size", default=1000, help="Number of records to insert in each batch")
+def data_extraction(input_dir: Path, batch_size: int):
+    """Extract and batch insert records from JSON files."""
+    input_dir = Path(input_dir)
+    click.echo("Extracting IDs from data...")
+    records = []
+    total_inserted = 0
+
+    # Create Supabase client once
+    supabase_client = supabase.create_client(
+        settings.SUPABASE_URL,
+        settings.SUPABASE_KEY,
+        options=supabase.ClientOptions(
+            postgrest_client_timeout=30,
+            storage_client_timeout=30,
+            schema="public",
+        ),
+    )
+
+    for file in input_dir.glob("*.json"):
+        with open(file, "r") as f:
+            doc = Document.model_validate_json(f.read())
+        doc_ids = doc.get_ids()
+        records.append({
+            "pmid": doc_ids.pmid,
+            "pmcid": doc_ids.pmcid,
+            "doi": doc_ids.doi,
+            "filename": file.name,
+            "title": doc.title,
+            "year": doc.year,
+        })
+
+        # When batch size is reached, insert records
+        if len(records) >= batch_size:
+            inserted = batch_insert_records(supabase_client, records, "pubmed_records")
+            total_inserted += inserted
+            records = []  # Clear the records list
+            click.echo(f"Inserted batch of {inserted} records. Total: {total_inserted}")
+
+    # Insert any remaining records
+    if records:
+        inserted = batch_insert_records(supabase_client, records, "pubmed_records")
+        total_inserted += inserted
+        click.echo(f"Inserted final batch of {inserted} records. Total: {total_inserted}")
+
+    click.echo(f"Successfully inserted {total_inserted} records in total")
+
+def batch_insert_records(client, records: list, table_name: str) -> int:
+    """Insert a batch of records and return number of successful inserts."""
+    try:
+        result = client.table(table_name).insert(records).execute()
+        return len(result.data)
+    except Exception as e:
+        logger.error(f"Error inserting batch: {str(e)}")
+        return 0
 
 @cli.command()
 def download_pubmed():
