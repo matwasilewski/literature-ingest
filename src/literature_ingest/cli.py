@@ -103,24 +103,14 @@ def download_pmc_incremental(dry_run: bool, base_dir: Path, overwrite: bool):
 @cli.command()
 @click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("output_dir", type=click.Path(file_okay=False))
-@click.option(
-    "--format",
-    type=click.Choice(["raw", "json"]),
-    default="raw",
-    help="Output format (raw text or JSON)",
-)
-@click.option(
-    "--pattern",
-    default="*.xml",
-    help="File pattern to match (e.g. *.xml)",
-    type=str,
-)
-def parse_docs(input_dir: str, output_dir: str, format: str, pattern: str):
+def parse_pmc(input_dir: str, output_dir: str):
     """Parse multiple PMC XML documents from a directory.
 
     INPUT_DIR: Directory containing PMC XML files
     OUTPUT_DIR: Directory where parsed documents should be saved
     """
+    pattern = "*.xml"
+
     try:
         input_path = Path(input_dir)
         output_path = Path(output_dir)
