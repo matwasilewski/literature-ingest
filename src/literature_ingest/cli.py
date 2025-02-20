@@ -232,25 +232,26 @@ def upload_file(bucket, directory, unzipped_file):
 
 
 @cli.command()
+@click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("batch_size", type=int, default=1)
 @click.option("--metadata-file", type=click.Path(dir_okay=False), default="pmc_metadata.csv")
-def process_pmc(batch_size: int, metadata_file: str):
-    """Process PMC data in batches and extract metadata."""
+@click.option("--test-run", is_flag=True, default=True, help="Run in test mode (only process first batch)")
+def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: bool):
+    """Process PMC data in batches and extract metadata.
+
+    INPUT_DIR: Directory containing raw PMC .tar.gz files
+    """
     click.echo("Processing PMC data...")
+    input_dir = Path(input_dir)
     base_dir = Path("data/pipelines/pmc")
-    raw_dir = base_dir / "raw"
-
-    # Create directories
-    raw_dir.mkdir(parents=True, exist_ok=True)
-
-    click.echo("Downloading PMC data...")
-    pmc_downloader = PMCFTPClient()
-    baseline_files = pmc_downloader._download_pmc_baselines(raw_dir, dry_run=False, overwrite=False)
-    incremental_files = pmc_downloader._download_pmc_incremental(raw_dir, dry_run=False, overwrite=False)
-    click.echo(f"Downloaded {len(baseline_files) + len(incremental_files)} files")
 
     # Process files in batches
-    archive_files = list(raw_dir.glob("*.tar.gz"))
+    archive_files = list(input_dir.glob("*.tar.gz"))
+    if not archive_files:
+        raise click.ClickException(f"No .tar.gz files found in {input_dir}")
+
+    click.echo(f"Found {len(archive_files)} archive files to process")
+
     metadata_records = []
 
     # Initialize GCS client
@@ -352,6 +353,9 @@ def process_pmc(batch_size: int, metadata_file: str):
 
             parse_upload_time = datetime.datetime.now() - start_time
             click.echo(f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}")
+
+            if test_run:
+                break
 
             # Cleanup local directories
             shutil.rmtree(unzipped_dir)
