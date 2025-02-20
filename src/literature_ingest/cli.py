@@ -207,7 +207,7 @@ def pipelines():
     pass
 
 @pipelines.command()
-@click.argument("unzipped_dir", type=click.Path(exists=True, file_okay=False))
+@click.argument("unzipped_dir", type=click.Path(exists=True, dir_okay=False))
 @click.argument("parsed_dir", type=click.Path(exists=True, file_okay=False))
 def upload_to_gcs_and_save_space(unzipped_dir: Path, parsed_dir: Path):
     unzipped_dir = Path(unzipped_dir)
@@ -258,6 +258,60 @@ def upload_to_gcs_and_save_space(unzipped_dir: Path, parsed_dir: Path):
     click.echo(f"Deleted file's {unzipped_dir} and {parsed_dir} processed contents...")
 
 
+@cli.command()
+def download_pmc():
+    """Download PMC data."""
+    click.echo("Ingesting PMC data...")
+    base_dir = Path("data/pipelines/pmc")
+
+    # Define directories
+    raw_dir = base_dir / "raw"
+
+    # Create directories
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download data
+    pmc_downloader = PMCFTPClient()
+
+    click.echo("Downloading PMC...")
+    click.echo("Downloading PMC Baselines (full)...")
+    baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir)
+    click.echo("Downloading PMC incremental...")
+    incremental_files_downloaded = pmc_downloader._download_pmc_incremental(raw_dir)
+    click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} "
+               "files... Files already stored are not downloaded again and counter here.")
+
+
+@cli.command()
+def download_pubmed():
+    """Download PubMed data."""
+    click.echo("Ingesting PubMed data...")
+    base_dir = Path("data/pipelines/pubmed")
+
+    # Define directories
+    raw_dir = base_dir / "raw"
+
+    click.echo("Ingesting PubMed data...")
+    base_dir = Path("data/pipelines/pubmed")
+
+    # Define directories
+    raw_dir = base_dir / "raw"
+
+    # Create directories
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download data
+    pubmed_downloader = PubMedFTPClient()
+    click.echo("Downloading PubMed baselines...")
+
+    baseline_files_downloaded, baseline_date = pipeline_download_pubmed(raw_dir)
+    dated_raw_dir = raw_dir / baseline_date if baseline_date else raw_dir
+
+    click.echo(f"Downloaded {len(baseline_files_downloaded)} files...")
+    click.echo("DONE: Download PubMed data")
+
+
+
 @pipelines.command()
 @click.option(
     "--sample",
@@ -303,7 +357,8 @@ def ingest_pmc(sample: bool, save_space: bool):
         baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir)
         click.echo("Downloading PMC incremental...")
         incremental_files_downloaded = pmc_downloader._download_pmc_incremental(raw_dir)
-        click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} files... Files already stored are not downloaded again and counter here.")
+        click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} "
+                   "files... Files already stored are not downloaded again and counter here.")
 
     click.echo("DONE: Download PMC data")
 
