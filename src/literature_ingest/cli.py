@@ -34,71 +34,19 @@ def cli():
     """Literature ingest CLI tool for downloading and processing PMC articles."""
     pass
 
-@cli.command()
-@click.option(
-    "--dry-run",
-    is_flag=True,
-    help="Show what would be downloaded without actually downloading",
-)
-@click.option(
-    "--base-dir",
-    default=Path("data/pmc/baselines"),
-    help="Directory to store downloaded baseline files",
-    type=Path,
-)
-@click.option(
-    "--overwrite",
-    is_flag=True,
-    help="Overwrite existing files",
-)
-def download_pmc_baselines(dry_run: bool, base_dir: Path, overwrite: bool):
-    """Download baseline files from the PMC FTP server."""
-    client = get_client("PMC")
-    try:
-        logger.info(f"Connecting to PMC FTP server...")
-        client.connect()
 
-        logger.info(f"Downloading baselines to {base_dir}")
-        client._download_pmc_baselines(base_dir=base_dir, dry_run=dry_run, overwrite=overwrite)
+@cli.group()
+def pipelines():
+    """Commands for running various data processing pipelines."""
+    pass
 
-    except Exception as e:
-        logger.error(f"Error downloading baselines: {str(e)}")
-        raise click.ClickException(str(e))
-    finally:
-        client.close()
 
 @cli.command()
-@click.option(
-    "--dry-run",
-    is_flag=True,
-    help="Show what would be downloaded without actually downloading",
-)
-@click.option(
-    "--base-dir",
-    default=Path("data/pmc/incremental"),
-    help="Directory to store downloaded incremental files",
-    type=Path,
-)
-@click.option(
-    "--overwrite",
-    is_flag=True,
-    help="Overwrite existing files",
-)
-def download_pmc_incremental(dry_run: bool, base_dir: Path, overwrite: bool):
-    """Download incremental files from the PMC FTP server."""
-    client = get_client("PMC")
-    try:
-        logger.info(f"Connecting to PMC FTP server...")
-        client.connect()
-
-        logger.info(f"Downloading incremental to {base_dir}")
-        client._download_pmc_incremental(base_dir=base_dir, dry_run=dry_run, overwrite=overwrite)
-
-    except Exception as e:
-        logger.error(f"Error downloading incremental: {str(e)}")
-        raise click.ClickException(str(e))
-    finally:
-        client.close()
+@click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
+@click.argument("output_dir", type=click.Path(file_okay=False))
+def unzip_pmc(input_dir: str, output_dir: str):
+    """Unzip PMC files."""
+    unzip_and_filter(input_dir, output_dir, extension=".xml", use_gsutil=False, overwrite=True)
 
 @cli.command()
 @click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
@@ -134,10 +82,6 @@ def parse_pmc(input_dir: str, output_dir: str):
         logger.error(f"Error processing documents: {str(e)}")
         raise click.ClickException(str(e))
 
-@cli.group()
-def pipelines():
-    """Commands for running various data processing pipelines."""
-    pass
 
 @pipelines.command()
 @click.argument("unzipped_dir", type=click.Path(exists=True, dir_okay=False))
@@ -208,9 +152,9 @@ def download_pmc():
 
     click.echo("Downloading PMC...")
     click.echo("Downloading PMC Baselines (full)...")
-    baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir)
+    baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir, dry_run=False, overwrite=False)
     click.echo("Downloading PMC incremental...")
-    incremental_files_downloaded = pmc_downloader._download_pmc_incremental(raw_dir)
+    incremental_files_downloaded = pmc_downloader._download_pmc_incremental(raw_dir, dry_run=False, overwrite=False)
     click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} "
                "files... Files already stored are not downloaded again and counter here.")
 
@@ -334,3 +278,15 @@ def upload_file(bucket, directory, unzipped_file):
     except Exception as e:
         logging.error(f"Failed to upload {unzipped_file}: {str(e)}")
         return False
+
+
+"""
+1. Download everything from PMC
+THIS IS A LOOP
+    2. Unzip every archive file downloaded from PMC, into a respective folder
+    3. Parse every xml file in the respective folder, into a new folder
+    4. Extract ids from every json file in the parsed folder
+    5. Upload every unzipped file to GCS
+    6. Upload every parsed file to GCS
+    7. Delete the unzipped and parsed folders
+"""
