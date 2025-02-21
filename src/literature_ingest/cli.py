@@ -11,6 +11,8 @@ from literature_ingest.utils.logging import get_logger
 from literature_ingest.utils.config import settings
 from literature_ingest.models import Document
 
+from tenacity import retry, stop_after_attempt, wait_exponential
+
 import supabase
 
 import shutil
@@ -23,6 +25,7 @@ import csv
 import pandas as pd
 from itertools import islice
 import json
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = get_logger(__name__, "info")
 
@@ -210,24 +213,31 @@ def download_pubmed():
     # Define directories
     raw_dir = base_dir / "raw"
 
-    click.echo("Ingesting PubMed data...")
-    base_dir = Path("data/pipelines/pubmed")
-
-    # Define directories
-    raw_dir = base_dir / "raw"
-
     # Create directories
     raw_dir.mkdir(parents=True, exist_ok=True)
+
+    # Add retry decorator to handle transient failures
+    @retry(
+        stop=stop_after_attempt(5),  # Try 5 times
+        wait=wait_exponential(multiplier=1, min=4, max=60),  # Wait between 4 and 60 seconds, exponentially increasing
+        reraise=True
+    )
+    def download_with_retry(downloader, raw_dir):
+        return pipeline_download_pubmed(raw_dir)
 
     # Download data
     pubmed_downloader = PubMedFTPClient()
     click.echo("Downloading PubMed baselines...")
 
-    baseline_files_downloaded, baseline_date = pipeline_download_pubmed(raw_dir)
-    dated_raw_dir = raw_dir / baseline_date if baseline_date else raw_dir
+    try:
+        baseline_files_downloaded, baseline_date = download_with_retry(pubmed_downloader, raw_dir)
+        dated_raw_dir = raw_dir / baseline_date if baseline_date else raw_dir
 
-    click.echo(f"Downloaded {len(baseline_files_downloaded)} files...")
-    click.echo("DONE: Download PubMed data")
+        click.echo(f"Downloaded {len(baseline_files_downloaded)} files...")
+        click.echo("DONE: Download PubMed data")
+    except Exception as e:
+        logger.error(f"Failed to download PubMed data after retries: {str(e)}")
+        raise click.ClickException(f"Failed to download PubMed data: {str(e)}")
 
 
 def upload_file(bucket, directory, unzipped_file):
