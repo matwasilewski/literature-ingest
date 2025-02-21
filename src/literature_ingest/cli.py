@@ -7,6 +7,7 @@ from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.normalization import normalize_document
 from literature_ingest.pipelines import pipeline_download_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pubmed, pipeline_unzip_pubmed
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
+from literature_ingest.pubmed import PubMedParser
 from literature_ingest.utils.logging import get_logger
 from literature_ingest.utils.config import settings
 from literature_ingest.models import Document
@@ -114,29 +115,6 @@ def download_pmc():
     incremental_files_downloaded = pmc_downloader._download_pmc_incremental(raw_dir, dry_run=False, overwrite=False)
     click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} "
                "files... Files already stored are not downloaded again and counter here.")
-
-@cli.command()
-@click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
-def unzip_and_parse_pubmed(input_dir: Path):
-    """Unzip and parse PubMed data."""
-    input_dir = Path(input_dir)
-    click.echo("Unzipping and parsing PubMed data...")
-    base_dir = Path("data/pipelines/pubmed")
-
-    unzipped_dir = base_dir / "unzipped" / input_dir.name
-    parsed_dir = base_dir / "parsed"
-
-    unzipped_dir.mkdir(parents=True, exist_ok=True)
-    parsed_dir.mkdir(parents=True, exist_ok=True)
-
-    unzipped_files = unzip_and_filter(input_dir, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
-    click.echo(f"Unzipped {len(unzipped_files)} files to {unzipped_dir}...")
-
-    # get all files from the unzipped directory
-    unzipped_files = list(unzipped_dir.glob("*.xml"))
-
-    parsed_files = pipeline_parse_pubmed(unzipped_files, parsed_dir)
-    click.echo(f"Parsed {len(parsed_files)} files to {parsed_dir}...")
 
 
 @cli.command()
@@ -378,6 +356,163 @@ def process_pmc(input_dir: str, batch_size: int, test_run: bool):
             parsed_files = [f for f in parsed_files if f.is_file()]
 
             parsed_upload_fn = partial(upload_file, bucket, "pmc/parsed")
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                results = list(tqdm(
+                    executor.map(parsed_upload_fn, parsed_files),
+                    total=len(parsed_files),
+                    desc="Uploading parsed files"
+                ))
+
+            parse_upload_time = datetime.datetime.now() - start_time
+            click.echo(f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}")
+
+            if test_run:
+                break
+
+            # Cleanup local directories
+            shutil.rmtree(unzipped_dir)
+            shutil.rmtree(parsed_dir)
+            click.echo(f"Cleaned up local directories: {unzipped_dir} and {parsed_dir}")
+
+        # Save metadata after each batch
+        df = pd.DataFrame(metadata_records)
+        metadata_file = metadata_dir / f"{metadata_file_stem}_{i}.csv"
+        df.to_csv(metadata_file, index=False)
+        click.echo(f"Saved metadata for {len(metadata_records)} documents to {metadata_file}")
+
+    click.echo("\nAll processing complete!")
+
+@cli.command()
+@click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
+@click.argument("batch_size", type=int, default=1)
+@click.option("--test-run", is_flag=True, default=False, help="Run in test mode (only process first batch)")
+def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
+    """Process PubMed data in batches and extract metadata.
+
+    INPUT_DIR: Directory containing raw PubMed .xml.gz files
+    """
+    click.echo("Processing PubMed data...")
+    input_dir = Path(input_dir)
+    base_dir = Path("data/pipelines/pubmed")
+    metadata_dir = base_dir / "metadata"
+    metadata_dir.mkdir(parents=True, exist_ok=True)
+
+    metadata_file_stem = "pubmed_metadata"
+
+    # Process files in batches
+    archive_files = list(input_dir.glob("**/*.xml.gz"))
+    if not archive_files:
+        raise click.ClickException(f"No .xml.gz files found in {input_dir}")
+
+    click.echo(f"Found {len(archive_files)} archive files to process")
+
+    def get_id_by_type(ids, id_type):
+        """Helper function to get ID value by type"""
+        for doc_id in ids:
+            if doc_id.type == id_type:
+                return doc_id.id
+        return None
+
+    # Initialize GCS client
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(settings.PROD_BUCKET)
+    max_workers = settings.MAX_WORKERS
+
+    # Get bucket name for constructing gs:// paths
+    bucket_name = settings.PROD_BUCKET
+
+    for i in range(0, len(archive_files), batch_size):
+        metadata_records = []
+        batch = archive_files[i:i + batch_size]
+        click.echo(f"\nProcessing batch {i//batch_size + 1}/{(len(archive_files) + batch_size - 1)//batch_size}")
+
+        for archive_file in batch:
+            click.echo(f"\nProcessing {archive_file.name}")
+
+            # Create batch-specific directories
+            batch_dir = base_dir / "batches" / archive_file.stem
+            unzipped_dir = batch_dir / "unzipped"
+            parsed_dir = batch_dir / "parsed"
+
+            unzipped_dir.mkdir(parents=True, exist_ok=True)
+            parsed_dir.mkdir(parents=True, exist_ok=True)
+
+            # Unzip
+            click.echo("Unzipping...")
+            unzipped_files = unzip_and_filter(archive_file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
+            click.echo(f"Unzipped {len(unzipped_files)} files")
+
+            # Parse
+            click.echo("Parsing...")
+            xml_files = list(unzipped_dir.glob("*.xml"))
+            click.echo(f"Parsing {len(xml_files)} files...")
+
+            parser = PubMedParser()
+            parsed_dir.mkdir(parents=True, exist_ok=True)
+
+            print(f"Parsing {len(unzipped_files)} files...")
+            parsed_files = parser.parse_docs(unzipped_files, parsed_dir, use_threads=True, max_threads=settings.MAX_WORKERS)
+
+            print(f"Parsed {len(parsed_files)} files...")
+            print("DONE: Parse PubMed data")
+
+            click.echo(f"Parsed {len(parsed_files)} files...")
+
+            # Extract metadata and store GCS paths
+            click.echo("Extracting metadata...")
+            for json_file in parsed_dir.glob("*.json"):
+                with open(json_file, "r") as f:
+                    doc = Document.model_validate_json(f.read())
+
+                # Construct GCS paths
+                parsed_gcs_path = f"gs://{bucket_name}/pubmed/parsed/{json_file.name}"
+                xml_name = json_file.stem + ".xml"  # Original XML file name
+                unzipped_gcs_path = f"gs://{bucket_name}/pubmed/unzipped/{archive_file.stem}/{xml_name}"
+
+                metadata_records.append({
+                    "pmid": get_id_by_type(doc.ids, "pubmed"),
+                    "pmcid": get_id_by_type(doc.ids, "pmc"),
+                    "doi": get_id_by_type(doc.ids, "doi"),
+                    "filename": json_file.name,
+                    "title": doc.title,
+                    "year": doc.year,
+                    "archive_file": archive_file.name,
+                    "parsed_gcs_path": parsed_gcs_path,
+                    "unzipped_gcs_path": unzipped_gcs_path
+                })
+
+            # Upload to GCS
+            click.echo("Uploading files to GCS...")
+            start_time = datetime.datetime.now()
+
+            # Upload unzipped files - maintain archive structure
+            unzipped_files = list(unzipped_dir.glob('**/*'))
+            unzipped_files = [f for f in unzipped_files if f.is_file()]
+
+            # Create partial function for unzipped files with archive-specific directory
+            unzipped_upload_fn = partial(
+                upload_file,
+                bucket,
+                f"pubmed/unzipped/{archive_file.stem}"
+            )
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                results = list(tqdm(
+                    executor.map(unzipped_upload_fn, unzipped_files),
+                    total=len(unzipped_files),
+                    desc="Uploading unzipped files"
+                ))
+
+            unzip_upload_time = datetime.datetime.now() - start_time
+            click.echo(f"Uploaded {len(unzipped_files)} unzipped files in {unzip_upload_time}")
+
+            # Upload parsed files - flat directory
+            start_time = datetime.datetime.now()
+            parsed_files = list(parsed_dir.glob('**/*'))
+            parsed_files = [f for f in parsed_files if f.is_file()]
+
+            parsed_upload_fn = partial(upload_file, bucket, "pubmed/parsed")
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 results = list(tqdm(

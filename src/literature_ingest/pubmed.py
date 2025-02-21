@@ -4,9 +4,10 @@ from collections import defaultdict
 import multiprocessing
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import xml.etree.ElementTree as ET
 import backoff
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from literature_ingest.models import ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, PUBMED_PUBLICATION_TYPE_MAP, Section
 from literature_ingest.normalization import normalize_document
@@ -315,31 +316,65 @@ class PubMedParser:
             parsed_date=datetime.now(timezone.utc)
         )
 
-    def parse_docs(self, files: list[Path], output_dir: Path) -> list[Path]:
-        """Parse a list of PubMed XML files and save to output_dir"""
+    def _process_single_file(self, file: Path, output_dir: Path) -> List[Path]:
+        """Process a single file and return its output paths if successful"""
+        output_paths = []
+        try:
+            with file.open(mode='r') as f:
+                docs = self.parse_doc(f.read(), file)
+
+            for doc_idx, doc in enumerate(docs):
+                output_path = output_dir / f"{file.stem}_{doc_idx}.json"
+                with open(output_path, 'w') as f:
+                    f.write(doc.model_dump_json(indent=2))
+                output_paths.append(output_path)
+            return output_paths
+        except Exception as e:
+            log.error(f"Error parsing {file.name}: {str(e)}")
+            return []
+
+    def parse_docs(self, files: List[Path], output_dir: Path, use_threads: bool = False, max_threads: Optional[int] = None) -> List[Path]:
+        """Parse a list of PubMed XML files and save to output_dir
+
+        Args:
+            files: List of files to parse
+            output_dir: Directory to save parsed files
+            use_threads: Whether to use multithreading
+            max_threads: Maximum number of threads to use (defaults to CPU count if None)
+        """
         documents = []
         counter = 0
         timestamp = datetime.now(timezone.utc)
 
-        for file in files:
-            file_name = file.stem + '.json'
-            try:
-                with file.open(mode='r') as f:
-                    docs = self.parse_doc(f.read(), file)
+        if use_threads:
+            # Use CPU count if max_threads not specified
+            thread_count = max_threads or self._cpu_count
+            with ThreadPoolExecutor(max_workers=thread_count) as executor:
+                # Submit all tasks
+                future_to_file = {
+                    executor.submit(self._process_single_file, file, output_dir): file
+                    for file in files
+                }
+
+                # Process completed tasks
+                for future in as_completed(future_to_file):
                     counter += 1
+                    if output_paths := future.result():
+                        documents.extend(output_paths)
+
                     if counter % 10000 == 0:
                         elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
                         log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
                         timestamp = datetime.now(timezone.utc)
-
-                output_paths = []
-                for doc_idx, doc in enumerate(docs):
-                    output_path = output_dir / f"{file.stem}_{doc_idx}.json"
-                    with open(output_path, 'w') as f:
-                        f.write(doc.model_dump_json(indent=2))
-                    output_paths.append(output_path)
-                documents.extend(output_paths)
-            except Exception as e:
-                log.error(f"Error parsing {file.name}: {str(e)}")
+        else:
+            # Original single-threaded implementation
+            for file in files:
+                if output_paths := self._process_single_file(file, output_dir):
+                    documents.extend(output_paths)
+                counter += 1
+                if counter % 10000 == 0:
+                    elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
+                    log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
+                    timestamp = datetime.now(timezone.utc)
 
         return documents

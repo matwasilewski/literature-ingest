@@ -70,21 +70,6 @@ def pipeline_download_pubmed(
     return baseline_files_downloaded, baseline_date
 
 
-def pipeline_parse_pubmed(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pubmed/parsed/")):
-    print("Parsing PubMed data..." )
-
-    parser = PubMedParser()
-    parsed_dir.mkdir(parents=True, exist_ok=True)
-
-    print(f"Parsing {len(unzipped_files)} files...")
-    parsed_files = parser.parse_docs(unzipped_files, parsed_dir)
-
-    print(f"Parsed {len(parsed_files)} files...")
-    print("DONE: Parse PubMed data")
-    parser.print_article_type_distribution()
-    return parsed_files
-
-
 def pipeline_unzip_pubmed(
     files_for_unzipping: List[Path],
     unzipped_dir: Path = Path("data/pipelines/pubmed/unzipped/"),
