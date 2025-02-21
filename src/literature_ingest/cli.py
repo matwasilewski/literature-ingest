@@ -245,7 +245,7 @@ def upload_file(bucket, directory, unzipped_file):
 @click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("batch_size", type=int, default=1)
 @click.option("--metadata-file", type=click.Path(dir_okay=False), default="pmc_metadata.csv")
-@click.option("--test-run", is_flag=True, default=True, help="Run in test mode (only process first batch)")
+@click.option("--test-run", is_flag=True, default=False, help="Run in test mode (only process first batch)")
 def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: bool):
     """Process PMC data in batches and extract metadata.
 
@@ -270,8 +270,6 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
                 return doc_id.id
         return None
 
-    metadata_records = []
-
     # Initialize GCS client
     storage_client = storage.Client()
     bucket = storage_client.bucket(settings.PROD_BUCKET)
@@ -281,6 +279,7 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
     bucket_name = settings.PROD_BUCKET
 
     for i in range(0, len(archive_files), batch_size):
+        metadata_records = []
         batch = archive_files[i:i + batch_size]
         click.echo(f"\nProcessing batch {i//batch_size + 1}/{(len(archive_files) + batch_size - 1)//batch_size}")
 
@@ -381,7 +380,7 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
 
         # Save metadata after each batch
         df = pd.DataFrame(metadata_records)
-        df.to_csv(metadata_file, index=False)
+        df.to_csv(metadata_file.stem + f"_{i}.csv", index=False)
         click.echo(f"Saved metadata for {len(metadata_records)} documents to {metadata_file}")
 
     click.echo("\nAll processing complete!")
