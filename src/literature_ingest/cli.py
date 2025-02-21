@@ -254,9 +254,8 @@ def upload_file(bucket, directory, unzipped_file):
 @cli.command()
 @click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("batch_size", type=int, default=1)
-@click.option("--metadata-file", type=click.Path(dir_okay=False), default="pmc_metadata.csv")
 @click.option("--test-run", is_flag=True, default=False, help="Run in test mode (only process first batch)")
-def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: bool):
+def process_pmc(input_dir: str, batch_size: int, test_run: bool):
     """Process PMC data in batches and extract metadata.
 
     INPUT_DIR: Directory containing raw PMC .tar.gz files
@@ -264,6 +263,10 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
     click.echo("Processing PMC data...")
     input_dir = Path(input_dir)
     base_dir = Path("data/pipelines/pmc")
+    metadata_dir = base_dir / "metadata"
+    metadata_dir.mkdir(parents=True, exist_ok=True)
+
+    metadata_file_stem = "pmc_metadata"
 
     # Process files in batches
     archive_files = list(input_dir.glob("**/*.tar.gz"))
@@ -396,7 +399,7 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
 
         # Save metadata after each batch
         df = pd.DataFrame(metadata_records)
-        metadata_file = Path(metadata_file) + f"_{i}.csv"
+        metadata_file = metadata_dir / f"{metadata_file_stem}_{i}.csv"
         df.to_csv(metadata_file, index=False)
         click.echo(f"Saved metadata for {len(metadata_records)} documents to {metadata_file}")
 
