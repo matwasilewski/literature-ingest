@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     PROD_BUCKET: Optional[str] = None
     SYSLOG_ADDR: Optional[Path] = None
 
+    MAX_WORKERS: int = 60
+
     OPENAI_API_KEY: Optional[str] = None
 
     class Config:

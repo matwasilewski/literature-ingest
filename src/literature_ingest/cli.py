@@ -283,7 +283,7 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
     # Initialize GCS client
     storage_client = storage.Client()
     bucket = storage_client.bucket(settings.PROD_BUCKET)
-    max_workers = 60  # Increased for I/O bound operations
+    max_workers = settings.MAX_WORKERS  # Increased for I/O bound operations
 
     # Get bucket name for constructing gs:// paths
     bucket_name = settings.PROD_BUCKET
