@@ -55,17 +55,6 @@ def pipeline_parse_missing_files_in_pmc(
     return parsed_files, failed_files
 
 
-def pipeline_parse_pmc(unzipped_files: List[Path], parsed_dir: Path = Path("data/pipelines/pmc/parsed/")):
-    parser = PMCParser()
-    parsed_dir.mkdir(parents=True, exist_ok=True)
-
-    print(f"Parsing {len(unzipped_files)} files...")
-    parsed_files = parser.parse_docs(unzipped_files, parsed_dir)
-
-    print(f"Parsed {len(parsed_files)} files...")
-    parser.print_article_type_distribution()
-    return parsed_files
-
 def pipeline_download_pubmed(
         raw_dir: Path = Path("data/pipelines/pubmed/raw/"),
     ) -> List[Path]:

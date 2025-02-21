@@ -15,6 +15,7 @@ from click import Path
 from literature_ingest.models import PMC_ARTICLE_TYPE_MAP, ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, Section
 from pydantic import BaseModel
 import multiprocessing
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
 PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR = '/pub/pmc/oa_bulk/oa_noncomm/xml'
@@ -653,28 +654,63 @@ class PMCParser:
             parsed_date=datetime.now(timezone.utc)
         )
 
-    def parse_docs(self, files: List[Path], output_dir: Path) -> List[Path]:
-        """Parse a list of PMC XML files and save to output_dir"""
+    def _process_single_file(self, file: Path, output_dir: Path) -> Optional[Path]:
+        """Process a single file and return its output path if successful"""
+        file_name = file.stem + '.json'
+        try:
+            with file.open(mode='r') as f:
+                doc = self.parse_doc(f.read(), file)
+
+            output_path = output_dir / file_name
+            with open(output_path, 'w') as f:
+                f.write(doc.model_dump_json(indent=2))
+            return output_path
+        except Exception as e:
+            log.error(f"Error parsing {file.name}: {str(e)}")
+            return None
+
+    def parse_docs(self, files: List[Path], output_dir: Path, use_threads: bool = False, max_threads: Optional[int] = None) -> List[Path]:
+        """Parse a list of PMC XML files and save to output_dir
+
+        Args:
+            files: List of files to parse
+            output_dir: Directory to save parsed files
+            use_threads: Whether to use multithreading
+            max_threads: Maximum number of threads to use (defaults to CPU count if None)
+        """
         documents = []
         counter = 0
         timestamp = datetime.now(timezone.utc)
 
-        for file in files:
-            file_name = file.stem + '.json'
-            try:
-                with file.open(mode='r') as f:
-                    doc = self.parse_doc(f.read(), file)
+        if use_threads:
+            # Use CPU count if max_threads not specified
+            thread_count = max_threads or self._cpu_count
+            with ThreadPoolExecutor(max_workers=thread_count) as executor:
+                # Submit all tasks
+                future_to_file = {
+                    executor.submit(self._process_single_file, file, output_dir): file
+                    for file in files
+                }
+
+                # Process completed tasks
+                for future in as_completed(future_to_file):
                     counter += 1
+                    if output_path := future.result():
+                        documents.append(output_path)
+
                     if counter % 10000 == 0:
                         elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
                         log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
                         timestamp = datetime.now(timezone.utc)
-
-                output_path = output_dir / file_name
-                with open(output_path, 'w') as f:
-                    f.write(doc.model_dump_json(indent=2))
-                documents.append(output_path)
-            except Exception as e:
-                log.error(f"Error parsing {file.name}: {str(e)}")
+        else:
+            # Original single-threaded implementation
+            for file in files:
+                if output_path := self._process_single_file(file, output_dir):
+                    documents.append(output_path)
+                counter += 1
+                if counter % 10000 == 0:
+                    elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
+                    log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
+                    timestamp = datetime.now(timezone.utc)
 
         return documents

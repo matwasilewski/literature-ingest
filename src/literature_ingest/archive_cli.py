@@ -7,7 +7,7 @@ import click
 from literature_ingest.cli import pipelines
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.normalization import normalize_document
-from literature_ingest.pipelines import pipeline_download_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pmc, pipeline_parse_pubmed, pipeline_unzip_pubmed
+from literature_ingest.pipelines import pipeline_download_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pubmed, pipeline_unzip_pubmed
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.utils.logging import get_logger
 from literature_ingest.utils.config import settings
@@ -17,97 +17,6 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 logger = get_logger(__name__, "info")
-
-
-@pipelines.command()
-@click.option(
-    "--sample",
-    is_flag=True,
-    help="Run sample ingestion with specific files",
-)
-@click.option(
-    "--save-space",
-    is_flag=True,
-    help="Save space by deleting downloaded files after ingestion",
-)
-def ingest_pmc(sample: bool, save_space: bool):
-    """Ingest PMC data. Use --sample flag for sample ingestion."""
-    if sample:
-        click.echo("Ingesting PMC sample data...")
-        base_dir = Path("data/pipelines/sample_pmc")
-    else:
-        click.echo("Ingesting PMC data...")
-        base_dir = Path("data/pipelines/pmc")
-
-    # Define directories
-    raw_dir = base_dir / "raw"
-    unzipped_dir = base_dir / "unzipped"
-    parsed_dir = base_dir / "parsed"
-
-    # Create directories
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    unzipped_dir.mkdir(parents=True, exist_ok=True)
-    parsed_dir.mkdir(parents=True, exist_ok=True)
-
-    # Download data
-    pmc_downloader = PMCFTPClient()
-    SAMPLE_FILE_NAME = 'oa_noncomm_xml.PMC002xxxxxx.baseline.2024-12-18.tar.gz'
-
-    click.echo("Downloading PMC...")
-    if sample:
-        click.echo("Downloading PMC Sample Files...")
-        baseline_files_downloaded = pmc_downloader._download_pmc_baselines_sample(raw_dir, file_names=[SAMPLE_FILE_NAME])
-        incremental_files_downloaded = []
-
-    else:
-        click.echo("Downloading PMC Baselines (full)...")
-        baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir)
-        click.echo("Downloading PMC incremental...")
-        incremental_files_downloaded = pmc_downloader._download_pmc_incremental(raw_dir)
-        click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} "
-                   "files... Files already stored are not downloaded again and counter here.")
-
-    click.echo("DONE: Download PMC data")
-
-    # Get all files from raw directory instead of using download outputs
-    if sample:
-        # Sample files have a specific pattern
-        all_raw_files = [f for f in raw_dir.glob(f"**/{SAMPLE_FILE_NAME}") if f.is_file()]
-    else:
-        # For full ingestion, get all tar.gz files
-        all_raw_files = [f for f in raw_dir.glob("**.tar.gz") if f.is_file()]
-
-    click.echo(f"Found {len(all_raw_files)} files in raw directory for processing")
-
-    # Unzip data
-    click.echo(f"Unzipping {raw_dir}...")
-    all_unzipped_files = []
-
-    for file in all_raw_files:
-        click.echo(f"Unzipping {file}...")
-        # Create a subdirectory using the file's stem (name without extension)
-        file_unzip_dir = unzipped_dir / Path(file).stem
-        file_unzip_dir.mkdir(parents=True, exist_ok=True)
-
-        unzipped_files_list = unzip_and_filter(file, file_unzip_dir, extension=".xml", use_gsutil=False, overwrite=True)
-        all_unzipped_files.extend(unzipped_files_list)
-        click.echo(f"Unzipped {len(unzipped_files_list)} files to {file_unzip_dir}...")
-
-        click.echo("Parsing PMC data..." )
-        updated_unzipped_files_list = list(file_unzip_dir.glob("*.xml"))
-        file_parsed_dir = parsed_dir / Path(file).stem
-        file_parsed_dir.mkdir(parents=True, exist_ok=True)
-
-        parsed_files = pipeline_parse_pmc(updated_unzipped_files_list, file_parsed_dir)
-        click.echo(f"Parsed {len(parsed_files)} files...")
-        click.echo("DONE: Parse PMC data")
-
-        if save_space:
-            upload_to_gcs_and_save_space(unzipped_dir, parsed_dir)
-
-    click.echo(f"Unzipped all files to {unzipped_dir}, total of {len(all_unzipped_files)} files...")
-    click.echo("DONE: Unzip PMC data")
-    click.echo(f"DONE: Ingest PMC {'sample ' if sample else ''}data")
 
 
 @pipelines.command()

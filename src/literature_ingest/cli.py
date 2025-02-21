@@ -5,7 +5,7 @@ from typing import List, Optional, Union
 import click
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.normalization import normalize_document
-from literature_ingest.pipelines import pipeline_download_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pmc, pipeline_parse_pubmed, pipeline_unzip_pubmed
+from literature_ingest.pipelines import pipeline_download_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pubmed, pipeline_unzip_pubmed
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.utils.logging import get_logger
 from literature_ingest.utils.config import settings
@@ -83,7 +83,7 @@ def parse_pmc(input_dir: str, output_dir: str):
         logger.info(f"Found {len(xml_files)} files to process")
         parser = PMCParser()
 
-        documents = parser.parse_docs(xml_files, output_path)
+        documents = parser.parse_docs(xml_files, output_path, use_threads=True, max_threads=settings.MAX_WORKERS)
 
         click.echo(f"Successfully processed {len(documents)} files")
 
@@ -312,8 +312,14 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
             # Parse
             click.echo("Parsing...")
             xml_files = list(unzipped_dir.glob("*.xml"))
-            parsed_files = pipeline_parse_pmc(xml_files, parsed_dir)
-            click.echo(f"Parsed {len(parsed_files)} files")
+
+            # Parse
+            parser = PMCParser()
+            parsed_dir.mkdir(parents=True, exist_ok=True)
+
+            click.echo(f"Parsing {len(unzipped_files)} files...")
+            parsed_files = parser.parse_docs(unzipped_files, parsed_dir, use_threads=True, max_threads=settings.MAX_WORKERS)
+            click.echo(f"Parsed {len(parsed_files)} files...")
 
             # Extract metadata and store GCS paths
             click.echo("Extracting metadata...")

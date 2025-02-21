@@ -2,9 +2,6 @@ from pathlib import Path
 from typing import List, Optional, Union
 from xml.dom.minidom import Document
 import click
-from literature_ingest.data_engineering import unzip_and_filter
-from literature_ingest.normalization import normalize_document
-from literature_ingest.pipelines import pipeline_download_pubmed, pipeline_parse_missing_files_in_pmc, pipeline_parse_pmc, pipeline_parse_pubmed, pipeline_unzip_pubmed
 from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
 from literature_ingest.utils.logging import get_logger
 from literature_ingest.utils.config import settings
