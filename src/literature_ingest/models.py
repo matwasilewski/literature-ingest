@@ -202,3 +202,8 @@ class Document(BaseModel):
         """Convert document to raw text format.
         """
         return "\n\n".join([section.text for section in self.sections]) if self.sections else ""
+
+    @property
+    def title(self) -> str:
+        """Returns the title of the document"""
+        return self.sections[0].text if self.sections else ""
