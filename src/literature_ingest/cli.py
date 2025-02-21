@@ -396,7 +396,8 @@ def process_pmc(input_dir: str, batch_size: int, metadata_file: str, test_run: b
 
         # Save metadata after each batch
         df = pd.DataFrame(metadata_records)
-        df.to_csv(Path(metadata_file).stem + f"_{i}.csv", index=False)
+        metadata_file = Path(metadata_file) + f"_{i}.csv"
+        df.to_csv(metadata_file, index=False)
         click.echo(f"Saved metadata for {len(metadata_records)} documents to {metadata_file}")
 
     click.echo("\nAll processing complete!")
