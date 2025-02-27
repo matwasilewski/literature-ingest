@@ -139,6 +139,11 @@ def download_pmc():
     )
 
 
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    reraise=True,
+)
 def batch_upsert_records(client, records: list, table_name: str) -> int:
     """Upsert a batch of records and return number of successful operations.
 
