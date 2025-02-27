@@ -201,13 +201,26 @@ def data_extraction(input_dir: Path, batch_size: int):
 
 
 def batch_insert_records(client, records: list, table_name: str) -> int:
-    """Insert a batch of records and return number of successful inserts."""
+    """Upsert a batch of records and return number of successful operations.
+
+    This performs an "upsert" operation - insert records if they don't exist,
+    or update them if they do exist based on a unique constraint.
+    """
     try:
-        result = client.table(table_name).insert(records).execute()
+        # Use the upsert method instead of insert
+        # The on_conflict parameter specifies which columns to use as the unique constraint
+        # Typically this would be pmid, pmcid, or doi - using all three for maximum flexibility
+        result = client.table(table_name).upsert(
+            records,
+            on_conflict=['pmid', 'pmcid', 'doi']  # Adjust these columns based on your table's unique constraints
+        ).execute()
+
         return len(result.data)
     except Exception as e:
-        sys.exit(1)
-        logger.error(f"Error inserting batch: {str(e)}")
+        logger.error(f"Error upserting batch: {str(e)}")
+        # Print a sample record to help with debugging
+        if records:
+            logger.error(f"Sample record: {records[0]}")
         return 0
 
 
