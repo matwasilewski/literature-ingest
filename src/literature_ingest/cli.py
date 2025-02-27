@@ -220,7 +220,11 @@ def batch_insert_records(client, records: list, table_name: str) -> int:
         logger.error(f"Error upserting batch: {str(e)}")
         # Print a sample record to help with debugging
         if records:
+            logger.error(f"{type(e)}")
+            logger.error(f"{str(e)}")
+            logger.error(f"{repr(e)}")
             logger.error(f"Sample record: {records[0]}")
+
         return 0
 
 
