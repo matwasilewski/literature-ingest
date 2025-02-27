@@ -703,10 +703,17 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
 
     # Track statistics for each file
     file_stats = {}
+    nan_counts = {}
 
     for csv_file in csv_files:
         click.echo(f"Reading {csv_file.name}...")
         df = pd.read_csv(csv_file)
+
+        # Count NaN values before replacing them
+        nan_counts[csv_file.name] = {col: df[col].isna().sum() for col in df.columns}
+
+        # Replace NaN values with None for JSON compatibility
+        df = df.replace({pd.NA: None, float('nan'): None})
         records = df.to_dict(orient="records")
 
         # Collect statistics for this file
@@ -719,7 +726,7 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
 
         total_records += len(records)
 
-        # Only add to all_records if not in dry run mode or if we need to process batches
+        # Only add to all_records if not in dry run mode
         if not dry_run:
             all_records.extend(records)
 
@@ -745,6 +752,12 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
                 percentage = (non_null / stats['record_count']) * 100 if stats['record_count'] > 0 else 0
                 click.echo(f"      {col}: {non_null} non-null values ({percentage:.1f}%), {null} null values")
 
+            # Print NaN counts
+            click.echo("    NaN values found (replaced with None):")
+            for col, count in nan_counts[filename].items():
+                if count > 0:
+                    click.echo(f"      {col}: {count} NaN values")
+
         click.echo("\nDRY RUN COMPLETE - No data was sent to Supabase")
         return
 
@@ -764,6 +777,10 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
         except Exception as e:
             logger.error(f"Error inserting batch: {str(e)}")
             click.echo(f"Error inserting batch: {str(e)}")
+
+            # Print a sample of the problematic batch for debugging
+            if len(batch) > 0:
+                click.echo(f"Sample record from failed batch: {batch[0]}")
 
     click.echo(
         f"\nUpload complete! Successfully inserted {total_inserted} out of {total_records} records into {table_name}"
