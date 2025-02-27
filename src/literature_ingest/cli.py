@@ -227,7 +227,7 @@ def batch_upsert_records(client, records: list, table_name: str) -> int:
             except Exception as save_error:
                 logger.error(f"Error saving failed batch: {str(save_error)}")
 
-        return 0
+        raise e
 
 
 @cli.command()
