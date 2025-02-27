@@ -656,7 +656,7 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
 @cli.command()
 @click.argument("metadata_dir", type=click.Path(exists=True, file_okay=False))
 @click.option(
-    "--batch-size", default=10000, help="Number of records to insert in each batch"
+    "--batch-size", default=2000, help="Number of records to insert in each batch"
 )
 @click.option(
     "--source",
