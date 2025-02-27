@@ -149,7 +149,7 @@ def batch_upsert_records(client, records: list, table_name: str) -> int:
         # Typically this would be pmid, pmcid, or doi - using all three for maximum flexibility
         result = client.table(table_name).upsert(
             records,
-            on_conflict=['pmid', 'pmcid', 'doi']  # Adjust these columns based on your table's unique constraints
+            on_conflict=['doc_key']  # Adjust these columns based on your table's unique constraints
         ).execute()
 
         return len(result.data)
@@ -666,8 +666,12 @@ def upload_metadata(metadata_dir: str, batch_size: int, source: str, dry_run: bo
         # Replace NaN values with None for JSON compatibility
         df = df.replace({pd.NA: None, float('nan'): None})
 
-        # Create new column, doc_key that will consist of pmid, pmcid, and doi (converted to strings)
-        df['doc_key'] = df.apply(lambda row: f"{row['pmid']}_{row['pmcid']}_{row['doi']}", axis=1)
+        # Create new column, doc_key that will consist of pmid, pmcid, and doi with type prefixes
+        # Use empty strings if values are None, and separate with &
+        df['doc_key'] = df.apply(
+            lambda row: f"pmid:{row['pmid'] or ''}&pmcid:{row['pmcid'] or ''}&doi:{row['doi'] or ''}",
+            axis=1
+        )
 
         records = df.to_dict(orient="records")
 
