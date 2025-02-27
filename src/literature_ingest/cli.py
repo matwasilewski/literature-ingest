@@ -1,5 +1,6 @@
 import datetime
 from pathlib import Path
+import sys
 from typing import List, Optional, Union
 
 import click
@@ -206,6 +207,7 @@ def batch_insert_records(client, records: list, table_name: str) -> int:
         return len(result.data)
     except Exception as e:
         breakpoint()
+        sys.exit(1)
         logger.error(f"Error inserting batch: {str(e)}")
         return 0
 
