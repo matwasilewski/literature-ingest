@@ -804,3 +804,60 @@ def upload_metadata(metadata_dir: str, batch_size: int, source: str, dry_run: bo
     click.echo(
         f"\nUpload complete! Successfully inserted {total_inserted} out of {total_records} records into {table_name}"
     )
+
+
+
+@cli.command()
+@click.option("--pmcid", help="PMC ID to search for")
+@click.option("--doi", help="DOI to search for")
+@click.option("--table", default="pmc_records", help="Supabase table to query (default: pmc_records)")
+@click.option("--output", "-o", type=click.Path(), help="Output file path to save the document JSON (optional)")
+@click.option("--text-only", is_flag=True, help="Output only the document text content")
+def get_document(pmcid: Optional[str], doi: Optional[str], table: str, output: Optional[str], text_only: bool):
+    """
+    Retrieve a document by PMCID or DOI from Supabase and GCS.
+
+    Example usage:
+    python -m literature_ingest.cli get-document --pmcid PMC123456
+    python -m literature_ingest.cli get-document --doi 10.1234/example.doi
+    python -m literature_ingest.cli get-document --pmcid PMC123456 --doi 10.1234/example.doi --table pubmed_records
+    python -m literature_ingest.cli get-document --pmcid PMC123456 --output document.json
+    python -m literature_ingest.cli get-document --pmcid PMC123456 --text-only
+    """
+    if not pmcid and not doi:
+        click.echo("Error: At least one of --pmcid or --doi must be provided")
+        return
+
+    click.echo(f"Searching for document with PMCID={pmcid}, DOI={doi} in table {table}...")
+
+    document = literature_ingest.gcs_retrieval.query_document_by_ids(pmcid=pmcid, doi=doi, table_name=table)
+
+    if not document:
+        click.echo("No document found.")
+        return
+
+    click.echo(f"Document found!")
+
+    # Display basic document info
+    click.echo(f"Title: {document.title}")
+    click.echo(f"Year: {document.year}")
+    click.echo(f"Authors: {', '.join([author.name for author in document.authors])}")
+
+    if document.journal:
+        click.echo(f"Journal: {document.journal.title}")
+
+    # Display IDs
+    for doc_id in document.ids:
+        click.echo(f"ID ({doc_id.type}): {doc_id.id}")
+
+    # Output document text if requested
+    if text_only:
+        click.echo("\nDocument Text:")
+        click.echo(document.to_raw_text())
+
+    # Save to output file if specified
+    if output:
+        output_path = Path(output)
+        with open(output_path, "w") as f:
+            f.write(document.to_json())
+        click.echo(f"Document saved to {output_path}")
