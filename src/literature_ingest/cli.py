@@ -648,13 +648,23 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
     default="ALL",
     help="Source of metadata files to process (PMC, PUBMED, or ALL)",
 )
-def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source: str):
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Run in dry-run mode (load files but don't upload to Supabase)",
+)
+def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source: str, dry_run: bool):
     """Upload metadata from CSV files to Supabase.
 
     METADATA_DIR: Directory containing metadata CSV files
     """
     metadata_dir = Path(metadata_dir)
-    click.echo(f"Processing metadata files from {metadata_dir}")
+
+    if dry_run:
+        click.echo(f"DRY RUN: Processing metadata files from {metadata_dir} (no data will be sent to Supabase)")
+    else:
+        click.echo(f"Processing metadata files from {metadata_dir}")
 
     # Determine which files to process based on source
     if source.upper() == "PMC":
@@ -673,31 +683,71 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
 
     click.echo(f"Found {len(csv_files)} metadata files to process")
 
-    # Create Supabase client
-    supabase_client = supabase.create_client(
-        settings.SUPABASE_URL,
-        settings.SUPABASE_KEY,
-        options=supabase.ClientOptions(
-            postgrest_client_timeout=30,
-            storage_client_timeout=30,
-            schema="public",
-        ),
-    )
+    # Create Supabase client (only if not in dry run mode)
+    supabase_client = None
+    if not dry_run:
+        supabase_client = supabase.create_client(
+            settings.SUPABASE_URL,
+            settings.SUPABASE_KEY,
+            options=supabase.ClientOptions(
+                postgrest_client_timeout=30,
+                storage_client_timeout=30,
+                schema="public",
+            ),
+        )
 
     # Process all files and concatenate data
     all_records = []
     total_records = 0
 
+    # Track statistics for each file
+    file_stats = {}
+
     for csv_file in csv_files:
         click.echo(f"Reading {csv_file.name}...")
         df = pd.read_csv(csv_file)
         records = df.to_dict(orient="records")
+
+        # Collect statistics for this file
+        file_stats[csv_file.name] = {
+            "record_count": len(records),
+            "columns": list(df.columns),
+            "non_null_counts": {col: df[col].count() for col in df.columns},
+            "null_counts": {col: df[col].isna().sum() for col in df.columns}
+        }
+
         total_records += len(records)
-        all_records.extend(records)
+
+        # Only add to all_records if not in dry run mode or if we need to process batches
+        if not dry_run:
+            all_records.extend(records)
 
     click.echo(f"Loaded {total_records} records from {len(csv_files)} files")
 
-    # Upload data in batches
+    # Print detailed statistics in dry run mode
+    if dry_run:
+        click.echo("\n=== DRY RUN SUMMARY ===")
+        click.echo(f"Total files: {len(csv_files)}")
+        click.echo(f"Total records: {total_records}")
+
+        # Print per-file statistics
+        click.echo("\nPer-file statistics:")
+        for filename, stats in file_stats.items():
+            click.echo(f"\n  {filename}:")
+            click.echo(f"    Records: {stats['record_count']}")
+
+            # Print column statistics
+            click.echo("    Column statistics:")
+            for col in stats['columns']:
+                non_null = stats['non_null_counts'][col]
+                null = stats['null_counts'][col]
+                percentage = (non_null / stats['record_count']) * 100 if stats['record_count'] > 0 else 0
+                click.echo(f"      {col}: {non_null} non-null values ({percentage:.1f}%), {null} null values")
+
+        click.echo("\nDRY RUN COMPLETE - No data was sent to Supabase")
+        return
+
+    # Upload data in batches (only if not in dry run mode)
     total_inserted = 0
 
     for i in range(0, len(all_records), batch_size):
