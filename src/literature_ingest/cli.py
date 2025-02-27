@@ -17,6 +17,8 @@ from literature_ingest.pubmed import PubMedParser
 from literature_ingest.utils.logging import get_logger
 from literature_ingest.utils.config import settings
 from literature_ingest.models import Document
+# Import gcs_retrieval to register its CLI commands
+import literature_ingest.gcs_retrieval
 
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -144,11 +146,54 @@ def batch_upsert_records(client, records: list, table_name: str) -> int:
     or update them if they do exist based on a unique constraint.
     """
     try:
-        # Use the upsert method instead of insert
-        # The on_conflict parameter specifies which columns to use as the unique constraint
-        # Typically this would be pmid, pmcid, or doi - using all three for maximum flexibility
+        # Check for duplicates within the batch based on doc_key
+        doc_keys_seen = {}
+        unique_records = []
+        duplicates = []
+
+        for record in records:
+            doc_key = record.get('doc_key')
+            if not doc_key:
+                # If no doc_key, just include it (will likely fail on insert anyway)
+                unique_records.append(record)
+                continue
+
+            if doc_key in doc_keys_seen:
+                # This is a duplicate
+                duplicates.append(record)
+                logger.warning(f"Duplicate record found with doc_key: {doc_key}")
+            else:
+                # First time seeing this doc_key
+                doc_keys_seen[doc_key] = True
+                unique_records.append(record)
+
+        # Log duplicate statistics
+        if duplicates:
+            logger.info(f"Removed {len(duplicates)} duplicate records from batch of {len(records)}")
+
+            # Save duplicates to file for inspection
+            failed_dir = Path("duplicate_records")
+            failed_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create a unique filename with timestamp
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            duplicate_file = failed_dir / f"duplicate_batch_{table_name}_{timestamp}.json"
+
+            try:
+                with open(duplicate_file, 'w') as f:
+                    json.dump(duplicates, f, default=str)
+                logger.info(f"Duplicate records saved to {duplicate_file}")
+            except Exception as save_error:
+                logger.error(f"Error saving duplicate records: {str(save_error)}")
+
+        # If no unique records after filtering, return 0
+        if not unique_records:
+            logger.warning("No unique records to insert after filtering duplicates")
+            return 0
+
+        # Use the upsert method instead of insert with the filtered unique records
         result = client.table(table_name).upsert(
-            records,
+            unique_records,
             on_conflict=['doc_key']  # Adjust these columns based on your table's unique constraints
         ).execute()
 
@@ -161,6 +206,21 @@ def batch_upsert_records(client, records: list, table_name: str) -> int:
             logger.error(f"{str(e)}")
             logger.error(f"{repr(e)}")
             logger.error(f"Sample record: {records[0]}")
+
+            # Save failed batch to file
+            failed_dir = Path("failed_batches")
+            failed_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create a unique filename with timestamp
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            failed_file = failed_dir / f"failed_batch_{table_name}_{timestamp}.json"
+
+            try:
+                with open(failed_file, 'w') as f:
+                    json.dump(records, f, default=str)
+                logger.info(f"Failed batch saved to {failed_file}")
+            except Exception as save_error:
+                logger.error(f"Error saving failed batch: {str(save_error)}")
 
         return 0
 
@@ -591,7 +651,7 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
 @cli.command()
 @click.argument("metadata_dir", type=click.Path(exists=True, file_okay=False))
 @click.option(
-    "--batch-size", default=1000, help="Number of records to insert in each batch"
+    "--batch-size", default=10000, help="Number of records to insert in each batch"
 )
 @click.option(
     "--source",
