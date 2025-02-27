@@ -137,70 +137,7 @@ def download_pmc():
     )
 
 
-@cli.command()
-@click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
-@click.option(
-    "--batch-size", default=1000, help="Number of records to insert in each batch"
-)
-def data_extraction(input_dir: Path, batch_size: int):
-    """Extract and batch insert records from JSON files."""
-    input_dir = Path(input_dir)
-    click.echo("Extracting IDs from data...")
-    records = []
-    total_inserted = 0
-
-    # Create Supabase client once
-    supabase_client = supabase.create_client(
-        settings.SUPABASE_URL,
-        settings.SUPABASE_KEY,
-        options=supabase.ClientOptions(
-            postgrest_client_timeout=30,
-            storage_client_timeout=30,
-            schema="public",
-        ),
-    )
-
-    def get_id_by_type(ids, id_type):
-        """Helper function to get ID value by type"""
-        for doc_id in ids:
-            if doc_id.type == id_type:
-                return doc_id.id
-        return None
-
-    for file in input_dir.glob("*.json"):
-        with open(file, "r") as f:
-            doc = Document.model_validate_json(f.read())
-
-        records.append(
-            {
-                "pmid": get_id_by_type(doc.ids, "pubmed"),
-                "pmcid": get_id_by_type(doc.ids, "pmc"),
-                "doi": get_id_by_type(doc.ids, "doi"),
-                "filename": file.name,
-                "title": doc.title,
-                "year": doc.year,
-            }
-        )
-
-        # When batch size is reached, insert records
-        if len(records) >= batch_size:
-            inserted = batch_insert_records(supabase_client, records, "pubmed_records")
-            total_inserted += inserted
-            records = []  # Clear the records list
-            click.echo(f"Inserted batch of {inserted} records. Total: {total_inserted}")
-
-    # Insert any remaining records
-    if records:
-        inserted = batch_insert_records(supabase_client, records, "pubmed_records")
-        total_inserted += inserted
-        click.echo(
-            f"Inserted final batch of {inserted} records. Total: {total_inserted}"
-        )
-
-    click.echo(f"Successfully inserted {total_inserted} records in total")
-
-
-def batch_insert_records(client, records: list, table_name: str) -> int:
+def batch_upsert_records(client, records: list, table_name: str) -> int:
     """Upsert a batch of records and return number of successful operations.
 
     This performs an "upsert" operation - insert records if they don't exist,
@@ -654,11 +591,6 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
 @cli.command()
 @click.argument("metadata_dir", type=click.Path(exists=True, file_okay=False))
 @click.option(
-    "--table-name",
-    default="document_ids",
-    help="Name of the Supabase table to insert records into",
-)
-@click.option(
     "--batch-size", default=1000, help="Number of records to insert in each batch"
 )
 @click.option(
@@ -673,7 +605,7 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
     default=False,
     help="Run in dry-run mode (load files but don't upload to Supabase)",
 )
-def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source: str, dry_run: bool):
+def upload_metadata(metadata_dir: str, batch_size: int, source: str, dry_run: bool):
     """Upload metadata from CSV files to Supabase.
 
     METADATA_DIR: Directory containing metadata CSV files
@@ -687,12 +619,13 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
 
     # Determine which files to process based on source
     if source.upper() == "PMC":
-        file_pattern = "pmc_metadata_*.csv"
-    elif source.upper() == "PUBMED":
-        file_pattern = "pubmed_metadata_*.csv"
-    else:  # ALL
+        table_name = "pmc_records"
         file_pattern = "*metadata_*.csv"
-
+    elif source.upper() == "PUBMED":
+        table_name = "pubmed_records"
+        file_pattern = "*metadata_*.csv"
+    else:  # ALL
+        raise click.ClickException("Invalid source. Please use 'PMC' or 'PUBMED'.")
     # Find all matching CSV files
     csv_files = list(metadata_dir.glob(file_pattern))
     if not csv_files:
@@ -733,11 +666,8 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
         # Replace NaN values with None for JSON compatibility
         df = df.replace({pd.NA: None, float('nan'): None})
 
-        # Replace None with empty string specifically for ID fields
-        id_columns = ['pmid', 'pmcid', 'doi']
-        for col in id_columns:
-            if col in df.columns:
-                df[col] = df[col].fillna('')
+        # Create new column, doc_key that will consist of pmid, pmcid, and doi (converted to strings)
+        df['doc_key'] = df.apply(lambda row: f"{row['pmid']}_{row['pmcid']}_{row['doi']}", axis=1)
 
         records = df.to_dict(orient="records")
 
@@ -796,7 +726,7 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
         )
 
         try:
-            inserted = batch_insert_records(supabase_client, batch, table_name)
+            inserted = batch_upsert_records(supabase_client, batch, table_name)
             total_inserted += inserted
             click.echo(f"Inserted batch of {inserted} records. Total: {total_inserted}")
         except Exception as e:
