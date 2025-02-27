@@ -206,7 +206,6 @@ def batch_insert_records(client, records: list, table_name: str) -> int:
         result = client.table(table_name).insert(records).execute()
         return len(result.data)
     except Exception as e:
-        breakpoint()
         sys.exit(1)
         logger.error(f"Error inserting batch: {str(e)}")
         return 0
@@ -716,6 +715,13 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
 
         # Replace NaN values with None for JSON compatibility
         df = df.replace({pd.NA: None, float('nan'): None})
+
+        # Replace None with empty string specifically for ID fields
+        id_columns = ['pmid', 'pmcid', 'doi']
+        for col in id_columns:
+            if col in df.columns:
+                df[col] = df[col].fillna('')
+
         records = df.to_dict(orient="records")
 
         # Collect statistics for this file
