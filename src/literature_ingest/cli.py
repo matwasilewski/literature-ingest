@@ -538,3 +538,73 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
         click.echo(f"Saved metadata for {len(metadata_records)} documents to {metadata_file}")
 
     click.echo("\nAll processing complete!")
+
+@cli.command()
+@click.argument("metadata_dir", type=click.Path(exists=True, file_okay=False))
+@click.option("--table-name", default="literature_metadata", help="Name of the Supabase table to insert records into")
+@click.option("--batch-size", default=1000, help="Number of records to insert in each batch")
+@click.option("--source", type=click.Choice(["PMC", "PUBMED", "ALL"], case_sensitive=False), default="ALL",
+              help="Source of metadata files to process (PMC, PUBMED, or ALL)")
+def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source: str):
+    """Upload metadata from CSV files to Supabase.
+
+    METADATA_DIR: Directory containing metadata CSV files
+    """
+    metadata_dir = Path(metadata_dir)
+    click.echo(f"Processing metadata files from {metadata_dir}")
+
+    # Determine which files to process based on source
+    if source.upper() == "PMC":
+        file_pattern = "pmc_metadata_*.csv"
+    elif source.upper() == "PUBMED":
+        file_pattern = "pubmed_metadata_*.csv"
+    else:  # ALL
+        file_pattern = "*metadata_*.csv"
+
+    # Find all matching CSV files
+    csv_files = list(metadata_dir.glob(file_pattern))
+    if not csv_files:
+        raise click.ClickException(f"No metadata CSV files found matching pattern '{file_pattern}' in {metadata_dir}")
+
+    click.echo(f"Found {len(csv_files)} metadata files to process")
+
+    # Create Supabase client
+    supabase_client = supabase.create_client(
+        settings.SUPABASE_URL,
+        settings.SUPABASE_KEY,
+        options=supabase.ClientOptions(
+            postgrest_client_timeout=30,
+            storage_client_timeout=30,
+            schema="public",
+        ),
+    )
+
+    # Process all files and concatenate data
+    all_records = []
+    total_records = 0
+
+    for csv_file in csv_files:
+        click.echo(f"Reading {csv_file.name}...")
+        df = pd.read_csv(csv_file)
+        records = df.to_dict(orient="records")
+        total_records += len(records)
+        all_records.extend(records)
+
+    click.echo(f"Loaded {total_records} records from {len(csv_files)} files")
+
+    # Upload data in batches
+    total_inserted = 0
+
+    for i in range(0, len(all_records), batch_size):
+        batch = all_records[i:i + batch_size]
+        click.echo(f"Uploading batch {i//batch_size + 1}/{(len(all_records) + batch_size - 1)//batch_size} ({len(batch)} records)")
+
+        try:
+            inserted = batch_insert_records(supabase_client, batch, table_name)
+            total_inserted += inserted
+            click.echo(f"Inserted batch of {inserted} records. Total: {total_inserted}")
+        except Exception as e:
+            logger.error(f"Error inserting batch: {str(e)}")
+            click.echo(f"Error inserting batch: {str(e)}")
+
+    click.echo(f"\nUpload complete! Successfully inserted {total_inserted} out of {total_records} records into {table_name}")
