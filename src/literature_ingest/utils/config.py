@@ -66,6 +66,9 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: Optional[str] = None
 
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_KEY: Optional[str] = None
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
