@@ -12,14 +12,24 @@ from datetime import datetime, timezone
 import backoff
 
 from click import Path
-from literature_ingest.models import PMC_ARTICLE_TYPE_MAP, ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, Section
+from literature_ingest.models import (
+    PMC_ARTICLE_TYPE_MAP,
+    ArticleType,
+    Author,
+    Document,
+    DocumentId,
+    JournalMetadata,
+    PublicationDates,
+    Section,
+)
 from pydantic import BaseModel
 import multiprocessing
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 PMC_FTP_HOST = "ftp.ncbi.nlm.nih.gov"
-PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR = '/pub/pmc/oa_bulk/oa_noncomm/xml'
-PUBMED_OPEN_ACCESS_DIR = '/pubmed/baseline'
+PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR = "/pub/pmc/oa_bulk/oa_noncomm/xml"
+PUBMED_OPEN_ACCESS_DIR = "/pubmed/baseline"
+
 
 class GenericFTPClient:
     def __init__(self):
@@ -46,8 +56,7 @@ class GenericFTPClient:
             self.ftp = None
             print("Connection closed")
 
-
-    def list_directory(self, path: str = '.') -> List[str]:
+    def list_directory(self, path: str = ".") -> List[str]:
         """List contents of the specified directory"""
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
@@ -57,7 +66,6 @@ class GenericFTPClient:
         files = [f.split()[-1] for f in files]
         return files
 
-
     @backoff.on_exception(backoff.expo, Exception, max_time=120, max_tries=10)
     def download_file(self, remote_file: str, target_path: Path) -> None:
         """Download a file from REMOTE_FILE to TARGET_PATH, from PMC FTP server defined in __init__"""
@@ -65,14 +73,20 @@ class GenericFTPClient:
             raise ConnectionError("Not connected to FTP server")
 
         try:
-            with target_path.open(mode='wb') as f:
-                self.ftp.retrbinary(f'RETR {remote_file}', f.write)
+            with target_path.open(mode="wb") as f:
+                self.ftp.retrbinary(f"RETR {remote_file}", f.write)
             print(f"Successfully downloaded {remote_file} to {target_path}")
         except Exception as e:
             print(f"Failed to download {remote_file}: {str(e)}")
             raise
 
-    def _download_files(self, files: List[str], base_dir: Path, dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+    def _download_files(
+        self,
+        files: List[str],
+        base_dir: Path,
+        dry_run: bool = False,
+        overwrite: bool = False,
+    ) -> List[Path]:
         """Download all files that don't exist locally."""
         target_file_paths = []
 
@@ -95,30 +109,34 @@ class GenericFTPClient:
         baseline_files = []
 
         for file in files:
-            if 'baseline' in file:
+            if "baseline" in file:
                 # Use regex to find date pattern YYYY-MM-DD between dots
-                match = re.search(r'\.(\d{4}-\d{2}-\d{2})\.' , file)
+                match = re.search(r"\.(\d{4}-\d{2}-\d{2})\.", file)
                 if not match:
-                    raise ValueError(f"Found a file with `baseline` string but no date: {file}")
+                    raise ValueError(
+                        f"Found a file with `baseline` string but no date: {file}"
+                    )
 
                 baseline_dates.add(match.group(1))
                 baseline_files.append(file)
 
         if len(baseline_dates) != 1:
-            raise ValueError(f"Exactly one baseline date is expected, found {len(baseline_dates)}: {baseline_dates}")
+            raise ValueError(
+                f"Exactly one baseline date is expected, found {len(baseline_dates)}: {baseline_dates}"
+            )
 
         return baseline_dates.pop(), baseline_files
-
 
     def extract_incremental_files(self, files: List[str]) -> List[str]:
         """Extract the date from incremental files in the current directory"""
         baseline_files = []
 
         for file in files:
-            if '.incr.' in file:
+            if ".incr." in file:
                 baseline_files.append(file)
 
         return baseline_files
+
 
 class PMCFTPClient(GenericFTPClient):
     def __init__(self):
@@ -127,9 +145,13 @@ class PMCFTPClient(GenericFTPClient):
         self.ftp = None
         self.connect()
 
-
     @backoff.on_exception(backoff.expo, Exception, max_time=60, max_tries=5)
-    def _download_pmc_incremental(self, base_dir: Path = Path('data/pmc/incremental'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+    def _download_pmc_incremental(
+        self,
+        base_dir: Path = Path("data/pmc/incremental"),
+        dry_run: bool = False,
+        overwrite: bool = False,
+    ) -> List[Path]:
         """Download all incremental files that don't exist locally."""
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
@@ -148,12 +170,19 @@ class PMCFTPClient(GenericFTPClient):
         dated_dir.mkdir(parents=True, exist_ok=True)
 
         incremental_files = self.extract_incremental_files(raw_file_names)
-        downloaded_files = self._download_files(incremental_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
+        downloaded_files = self._download_files(
+            incremental_files, dated_dir, dry_run=dry_run, overwrite=overwrite
+        )
 
         return downloaded_files
 
     @backoff.on_exception(backoff.expo, Exception, max_time=60, max_tries=5)
-    def _download_pmc_baselines(self, base_dir: Path = Path('data/pmc/baselines'), dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+    def _download_pmc_baselines(
+        self,
+        base_dir: Path = Path("data/pmc/baselines"),
+        dry_run: bool = False,
+        overwrite: bool = False,
+    ) -> List[Path]:
         """Download all baseline files that don't exist locally.
 
         Baseline files is a batch of PMC documents that should contain all PMC documents released up to a certain date.
@@ -179,11 +208,18 @@ class PMCFTPClient(GenericFTPClient):
         dated_dir = base_dir / baseline_date
         dated_dir.mkdir(parents=True, exist_ok=True)
 
-        downloaded_files = self._download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
+        downloaded_files = self._download_files(
+            baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite
+        )
         return downloaded_files
 
-
-    def _download_pmc_baselines_sample(self, base_dir: Path, file_names: List[str], dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+    def _download_pmc_baselines_sample(
+        self,
+        base_dir: Path,
+        file_names: List[str],
+        dry_run: bool = False,
+        overwrite: bool = False,
+    ) -> List[Path]:
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
 
@@ -200,10 +236,10 @@ class PMCFTPClient(GenericFTPClient):
         dated_dir = base_dir / baseline_date
         dated_dir.mkdir(parents=True, exist_ok=True)
 
-        downloaded_files = self._download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
+        downloaded_files = self._download_files(
+            baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite
+        )
         return downloaded_files
-
-
 
 
 class PubMedFTPClient(GenericFTPClient):
@@ -220,22 +256,29 @@ class PubMedFTPClient(GenericFTPClient):
 
         for file in files:
             # Match pattern like 'pubmed25n0001.xml.gz' but not '.gz.md5'
-            if file.endswith('.gz') and not file.endswith('.gz.md5'):
-                match = re.search(r'pubmed(\d+)n\d+\.xml\.gz$', file)
+            if file.endswith(".gz") and not file.endswith(".gz.md5"):
+                match = re.search(r"pubmed(\d+)n\d+\.xml\.gz$", file)
                 if match:
                     baseline_numbers.add(match.group(1))
                     baseline_files.append(file)
 
         if len(baseline_numbers) != 1:
-            raise ValueError(f"Exactly one baseline number is expected, found {len(baseline_numbers)}: {baseline_numbers}")
+            raise ValueError(
+                f"Exactly one baseline number is expected, found {len(baseline_numbers)}: {baseline_numbers}"
+            )
 
         # Convert baseline number (e.g., "25") to a date string (e.g., "2025-01-01")
         baseline_year = f"20{baseline_numbers.pop()}"
 
         return baseline_year, baseline_files
 
-
-    def _download_pubmed_baselines_sample(self, base_dir: Path, file_names: List[str], dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+    def _download_pubmed_baselines_sample(
+        self,
+        base_dir: Path,
+        file_names: List[str],
+        dry_run: bool = False,
+        overwrite: bool = False,
+    ) -> List[Path]:
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
 
@@ -252,16 +295,19 @@ class PubMedFTPClient(GenericFTPClient):
         dated_dir = base_dir / baseline_date
         dated_dir.mkdir(parents=True, exist_ok=True)
 
-        downloaded_files = self._download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
+        downloaded_files = self._download_files(
+            baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite
+        )
         return downloaded_files
 
-    def _download_pubmed_baselines(self, base_dir: Path, dry_run: bool = False, overwrite: bool = False) -> List[Path]:
+    def _download_pubmed_baselines(
+        self, base_dir: Path, dry_run: bool = False, overwrite: bool = False
+    ) -> List[Path]:
         if not self.ftp:
             raise ConnectionError("Not connected to FTP server")
 
         # Create base directory if it doesn't exist
         base_dir.mkdir(parents=True, exist_ok=True)
-
 
         # Get list of remote files
         raw_file_names = self.list_directory()
@@ -273,8 +319,11 @@ class PubMedFTPClient(GenericFTPClient):
         dated_dir = base_dir / baseline_date
         dated_dir.mkdir(parents=True, exist_ok=True)
 
-        downloaded_files = self._download_files(baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite)
+        downloaded_files = self._download_files(
+            baseline_files, dated_dir, dry_run=dry_run, overwrite=overwrite
+        )
         return downloaded_files, baseline_date
+
 
 class PMCParser:
     def __init__(self):
@@ -289,7 +338,7 @@ class PMCParser:
         sorted_types = sorted(
             self.unique_article_types.items(),
             key=lambda x: (x[1] / total_docs if total_docs > 0 else 0),
-            reverse=True
+            reverse=True,
         )
         for article_type, count in sorted_types:
             percentage = (count / total_docs * 100) if total_docs > 0 else 0
@@ -307,18 +356,30 @@ class PMCParser:
             aff_id = aff.get("id")
             if aff_id:
                 # Get full text content of affiliation including nested elements
-                aff_text = ''.join(aff.itertext()).strip()
+                aff_text = "".join(aff.itertext()).strip()
                 # Remove the label if it exists
-                label_elem = aff.find('label')
-                if label_elem is not None and label_elem.text and aff_text.startswith(label_elem.text):
-                    aff_text = aff_text[len(label_elem.text):].strip()
+                label_elem = aff.find("label")
+                if (
+                    label_elem is not None
+                    and label_elem.text
+                    and aff_text.startswith(label_elem.text)
+                ):
+                    aff_text = aff_text[len(label_elem.text) :].strip()
                 affiliations[aff_id] = aff_text
 
         for contrib in contrib_group.findall(".//contrib[@contrib-type='author']"):
             name = contrib.find(".//name")
             if name is not None:
-                surname = name.find("surname").text if name.find("surname") is not None else ""
-                given_names = name.find("given-names").text if name.find("given-names") is not None else ""
+                surname = (
+                    name.find("surname").text
+                    if name.find("surname") is not None
+                    else ""
+                )
+                given_names = (
+                    name.find("given-names").text
+                    if name.find("given-names") is not None
+                    else ""
+                )
                 full_name = f"{surname}, {given_names}"
 
                 # Get email
@@ -333,14 +394,18 @@ class PMCParser:
                         author_affiliations.append(affiliations[aff_id])
 
                 # Check if corresponding author
-                is_corresponding = contrib.find(".//xref[@ref-type='corresp']") is not None
+                is_corresponding = (
+                    contrib.find(".//xref[@ref-type='corresp']") is not None
+                )
 
-                authors.append(Author(
-                    name=full_name,
-                    email=email_text,
-                    affiliations=author_affiliations,
-                    is_corresponding=is_corresponding
-                ))
+                authors.append(
+                    Author(
+                        name=full_name,
+                        email=email_text,
+                        affiliations=author_affiliations,
+                        is_corresponding=is_corresponding,
+                    )
+                )
         return authors
 
     def _extract_dates(self, article_meta) -> PublicationDates:
@@ -369,10 +434,7 @@ class PMCParser:
                     dates[history_date_types[date_type]] = date_str
 
         # Handle pub-dates
-        pub_date_types = {
-            "epub": "epub_date",
-            "collection": "collection_date"
-        }
+        pub_date_types = {"epub": "epub_date", "collection": "collection_date"}
 
         for pub_date in article_meta.findall(".//pub-date"):
             pub_type = pub_date.get("pub-type")
@@ -401,10 +463,10 @@ class PMCParser:
         4. Received date
         """
         date_priority = [
-            'collection_date',
-            'epub_date',
-            'accepted_date',
-            'received_date'
+            "collection_date",
+            "epub_date",
+            "accepted_date",
+            "received_date",
         ]
 
         for date_type in date_priority:
@@ -431,14 +493,16 @@ class PMCParser:
         # Get abbreviation
         journal_id = journal_meta.find(".//journal-id[@journal-id-type='nlm-ta']")
         if journal_id is None:
-            journal_id = journal_meta.find(".//journal-id[@journal-id-type='iso-abbrev']")
+            journal_id = journal_meta.find(
+                ".//journal-id[@journal-id-type='iso-abbrev']"
+            )
         abbreviation = journal_id.text if journal_id is not None else None
 
         return JournalMetadata(
             title=title,
             issn=issn_text,
             publisher=publisher_text,
-            abbreviation=abbreviation
+            abbreviation=abbreviation,
         )
 
     def _extract_abstract(self, front) -> str:
@@ -459,7 +523,7 @@ class PMCParser:
         texts = []
         for p in section_elem.findall(".//p"):
             # Get all text content including from nested elements
-            text = ''.join(p.itertext()).strip()
+            text = "".join(p.itertext()).strip()
             if text:
                 texts.append(text)
         return " ".join(texts)
@@ -471,7 +535,9 @@ class PMCParser:
         for sec in body_elem.findall(xpath):
             # Get section title
             title_elem = sec.find("title")
-            section_name = title_elem.text if (title_elem is not None and title_elem.text) else ""
+            section_name = (
+                title_elem.text if (title_elem is not None and title_elem.text) else ""
+            )
 
             # Get section text content - Initialize with empty string instead of None
             text = ""
@@ -488,7 +554,9 @@ class PMCParser:
             # Process direct subsections and add their content to the parent section's text
             for subsec in sec.findall("./sec"):
                 subsec_title = subsec.find("title")
-                subsec_title_text = subsec_title.text if subsec_title is not None else ""
+                subsec_title_text = (
+                    subsec_title.text if subsec_title is not None else ""
+                )
                 subsec_text = self._extract_section_text(subsec)
 
                 if subsec_text:
@@ -501,10 +569,7 @@ class PMCParser:
 
             # Create section object only if there's content
             if text:
-                section = Section(
-                    name=section_name,
-                    text=text
-                )
+                section = Section(name=section_name, text=text)
                 sections.append(section)
 
         return sections
@@ -541,11 +606,18 @@ class PMCParser:
 
         self.unique_article_types[root.get("article-type", None)] += 1
         # Get article type
-        if root.get("article-type", None) is None or root.get("article-type", None).strip() not in PMC_ARTICLE_TYPE_MAP:
-            log.warn(f"File: {file_name.name} - Article type: {root.get('article-type', None)} not known!")
+        if (
+            root.get("article-type", None) is None
+            or root.get("article-type", None).strip() not in PMC_ARTICLE_TYPE_MAP
+        ):
+            log.warn(
+                f"File: {file_name.name} - Article type: {root.get('article-type', None)} not known!"
+            )
             article_type = None
         else:
-            article_type = PMC_ARTICLE_TYPE_MAP.get(root.get("article-type").strip(), ArticleType.OTHER)
+            article_type = PMC_ARTICLE_TYPE_MAP.get(
+                root.get("article-type").strip(), ArticleType.OTHER
+            )
 
         # Get article meta section
         article_meta = front.find(".//article-meta")
@@ -564,14 +636,13 @@ class PMCParser:
         title_elem = article_meta.find(".//article-title")
         title = None
         if title_elem is not None:
-            title = ''.join(title_elem.itertext()).strip()
+            title = "".join(title_elem.itertext()).strip()
         else:
             # For correction articles, the title is often in the first paragraph
             if root.get("article-type") == "correction":
                 first_p = root.find(".//body/p")
                 if first_p is not None:
-                    title = ''.join(first_p.itertext()).strip()
-
+                    title = "".join(first_p.itertext()).strip()
 
         # If title is still None, use the file name as a fallback
         if title is None:
@@ -586,7 +657,11 @@ class PMCParser:
 
         # Get publication year
         pub_date = article_meta.find(".//pub-date[@pub-type='collection']")
-        journal = self._extract_journal_metadata(journal_meta) if journal_meta is not None else None
+        journal = (
+            self._extract_journal_metadata(journal_meta)
+            if journal_meta is not None
+            else None
+        )
 
         # Get publication dates
         publication_dates = self._extract_dates(article_meta)
@@ -618,7 +693,9 @@ class PMCParser:
         license_elem = article_meta.find(".//license")
         license_type = None
         if license_elem is not None:
-            license_ref = license_elem.find(".//{http://www.niso.org/schemas/ali/1.0/}license_ref")
+            license_ref = license_elem.find(
+                ".//{http://www.niso.org/schemas/ali/1.0/}license_ref"
+            )
             if license_ref is not None:
                 license_type = license_ref.text
 
@@ -651,25 +728,31 @@ class PMCParser:
             license_type=license_type,
             copyright_statement=copyright_statement,
             copyright_year=copyright_year,
-            parsed_date=datetime.now(timezone.utc)
+            parsed_date=datetime.now(timezone.utc),
         )
 
     def _process_single_file(self, file: Path, output_dir: Path) -> Optional[Path]:
         """Process a single file and return its output path if successful"""
-        file_name = file.stem + '.json'
+        file_name = file.stem + ".json"
         try:
-            with file.open(mode='r') as f:
+            with file.open(mode="r") as f:
                 doc = self.parse_doc(f.read(), file)
 
             output_path = output_dir / file_name
-            with open(output_path, 'w') as f:
+            with open(output_path, "w") as f:
                 f.write(doc.model_dump_json(indent=2))
             return output_path
         except Exception as e:
             log.error(f"Error parsing {file.name}: {str(e)}")
             return None
 
-    def parse_docs(self, files: List[Path], output_dir: Path, use_threads: bool = False, max_threads: Optional[int] = None) -> List[Path]:
+    def parse_docs(
+        self,
+        files: List[Path],
+        output_dir: Path,
+        use_threads: bool = False,
+        max_threads: Optional[int] = None,
+    ) -> List[Path]:
         """Parse a list of PMC XML files and save to output_dir
 
         Args:
@@ -699,8 +782,12 @@ class PMCParser:
                         documents.append(output_path)
 
                     if counter % 10000 == 0:
-                        elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
-                        log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
+                        elapsed_seconds = (
+                            datetime.now(timezone.utc) - timestamp
+                        ).total_seconds()
+                        log.info(
+                            f"Parsed {counter} files in {elapsed_seconds:.1f} seconds"
+                        )
                         timestamp = datetime.now(timezone.utc)
         else:
             # Original single-threaded implementation
@@ -709,7 +796,9 @@ class PMCParser:
                     documents.append(output_path)
                 counter += 1
                 if counter % 10000 == 0:
-                    elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
+                    elapsed_seconds = (
+                        datetime.now(timezone.utc) - timestamp
+                    ).total_seconds()
                     log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
                     timestamp = datetime.now(timezone.utc)
 

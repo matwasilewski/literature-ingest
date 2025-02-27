@@ -14,28 +14,37 @@ def resolve_file_or_dir(target: Path, source: Path) -> Path:
     else:
         return target
 
-def unzip_and_filter(archive_file: Path, target_dir: Path, extension = ".xml", use_gsutil=False, overwrite=False) -> List[Path]:
+
+def unzip_and_filter(
+    archive_file: Path,
+    target_dir: Path,
+    extension=".xml",
+    use_gsutil=False,
+    overwrite=False,
+) -> List[Path]:
     return unzip_to_local(archive_file, target_dir, extension)
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=15))
-def unzip_to_local(archive_file: Path, target_dir: Path, extension = ".xml") -> List[Path]:
+def unzip_to_local(
+    archive_file: Path, target_dir: Path, extension=".xml"
+) -> List[Path]:
     files = []
 
     # Handle .gz files (non-tar archives)
-    if str(archive_file).endswith('.gz') and not str(archive_file).endswith('.tar.gz'):
+    if str(archive_file).endswith(".gz") and not str(archive_file).endswith(".tar.gz"):
         # Extract filename without .gz extension
         output_filename = archive_file.stem
         target_file_path = target_dir / output_filename
 
-        with gzip.open(archive_file, 'rb') as f_in:
-            with open(target_file_path, 'wb') as f_out:
+        with gzip.open(archive_file, "rb") as f_in:
+            with open(target_file_path, "wb") as f_out:
                 f_out.write(f_in.read())
         files.append(target_file_path)
         return files
 
     # Handle .tar.gz files
-    if str(archive_file).endswith('.tar.gz'):
+    if str(archive_file).endswith(".tar.gz"):
         with tarfile.open(archive_file, "r:gz") as tar:
             for member in tar.getmembers():
                 if member.isfile() and member.name.endswith(extension):

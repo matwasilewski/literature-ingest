@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from literature_ingest.models import Document, Section
 
+
 def migrate_document(old_doc: Dict) -> Dict:
     """Migrate an old document format to the new one."""
     # Create a copy to avoid modifying the input
@@ -23,6 +24,7 @@ def migrate_document(old_doc: Dict) -> Dict:
 
     return doc
 
+
 def migrate_documents_in_directory(directory_path: str) -> None:
     """
     Read all JSON files in the given directory, migrate them to the new format,
@@ -38,7 +40,7 @@ def migrate_documents_in_directory(directory_path: str) -> None:
     for json_file in dir_path.glob("*.json"):
         try:
             # Read the JSON file
-            with open(json_file, 'r') as f:
+            with open(json_file, "r") as f:
                 doc_dict = json.load(f)
 
             # Check if migration is needed by looking for title field
@@ -53,13 +55,14 @@ def migrate_documents_in_directory(directory_path: str) -> None:
             Document(**migrated_doc)
 
             # Write back to file
-            with open(json_file, 'w') as f:
+            with open(json_file, "w") as f:
                 json.dump(migrated_doc, f, indent=2)
 
             print(f"Successfully migrated {json_file}")
 
         except Exception as e:
             print(f"Error processing {json_file}: {str(e)}")
+
 
 if __name__ == "__main__":
     import sys

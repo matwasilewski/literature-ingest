@@ -5,7 +5,13 @@ from typing import List, Optional, Union
 import click
 from literature_ingest.data_engineering import unzip_and_filter
 from literature_ingest.pipelines import pipeline_download_pubmed
-from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
+from literature_ingest.pmc import (
+    PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR,
+    PUBMED_OPEN_ACCESS_DIR,
+    PMCFTPClient,
+    PMCParser,
+    PubMedFTPClient,
+)
 from literature_ingest.pubmed import PubMedParser
 from literature_ingest.utils.logging import get_logger
 from literature_ingest.utils.config import settings
@@ -38,6 +44,7 @@ def get_client(source: str):
         return PubMedFTPClient()
     raise click.ClickException(f"Unknown source: {source}")
 
+
 @click.group()
 def cli():
     """Literature ingest CLI tool for downloading and processing PMC articles."""
@@ -55,7 +62,10 @@ def pipelines():
 @click.argument("output_dir", type=click.Path(file_okay=False))
 def unzip_pmc(input_dir: str, output_dir: str):
     """Unzip PMC files."""
-    unzip_and_filter(input_dir, output_dir, extension=".xml", use_gsutil=False, overwrite=True)
+    unzip_and_filter(
+        input_dir, output_dir, extension=".xml", use_gsutil=False, overwrite=True
+    )
+
 
 @cli.command()
 @click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
@@ -78,12 +88,16 @@ def parse_pmc(input_dir: str, output_dir: str):
         # Get all XML files in input directory
         xml_files = list(input_path.glob(pattern))
         if not xml_files:
-            raise click.ClickException(f"No files matching pattern '{pattern}' found in {input_dir}")
+            raise click.ClickException(
+                f"No files matching pattern '{pattern}' found in {input_dir}"
+            )
 
         logger.info(f"Found {len(xml_files)} files to process")
         parser = PMCParser()
 
-        documents = parser.parse_docs(xml_files, output_path, use_threads=True, max_threads=settings.MAX_WORKERS)
+        documents = parser.parse_docs(
+            xml_files, output_path, use_threads=True, max_threads=settings.MAX_WORKERS
+        )
 
         click.echo(f"Successfully processed {len(documents)} files")
 
@@ -109,16 +123,24 @@ def download_pmc():
 
     click.echo("Downloading PMC...")
     click.echo("Downloading PMC Baselines (full)...")
-    baseline_files_downloaded = pmc_downloader._download_pmc_baselines(raw_dir, dry_run=False, overwrite=False)
+    baseline_files_downloaded = pmc_downloader._download_pmc_baselines(
+        raw_dir, dry_run=False, overwrite=False
+    )
     click.echo("Downloading PMC incremental...")
-    incremental_files_downloaded = pmc_downloader._download_pmc_incremental(raw_dir, dry_run=False, overwrite=False)
-    click.echo(f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} "
-               "files... Files already stored are not downloaded again and counter here.")
+    incremental_files_downloaded = pmc_downloader._download_pmc_incremental(
+        raw_dir, dry_run=False, overwrite=False
+    )
+    click.echo(
+        f"Downloaded {len(baseline_files_downloaded) + len(incremental_files_downloaded)} "
+        "files... Files already stored are not downloaded again and counter here."
+    )
 
 
 @cli.command()
 @click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
-@click.option("--batch-size", default=1000, help="Number of records to insert in each batch")
+@click.option(
+    "--batch-size", default=1000, help="Number of records to insert in each batch"
+)
 def data_extraction(input_dir: Path, batch_size: int):
     """Extract and batch insert records from JSON files."""
     input_dir = Path(input_dir)
@@ -148,14 +170,16 @@ def data_extraction(input_dir: Path, batch_size: int):
         with open(file, "r") as f:
             doc = Document.model_validate_json(f.read())
 
-        records.append({
-            "pmid": get_id_by_type(doc.ids, "pubmed"),
-            "pmcid": get_id_by_type(doc.ids, "pmc"),
-            "doi": get_id_by_type(doc.ids, "doi"),
-            "filename": file.name,
-            "title": doc.title,
-            "year": doc.year,
-        })
+        records.append(
+            {
+                "pmid": get_id_by_type(doc.ids, "pubmed"),
+                "pmcid": get_id_by_type(doc.ids, "pmc"),
+                "doi": get_id_by_type(doc.ids, "doi"),
+                "filename": file.name,
+                "title": doc.title,
+                "year": doc.year,
+            }
+        )
 
         # When batch size is reached, insert records
         if len(records) >= batch_size:
@@ -168,9 +192,12 @@ def data_extraction(input_dir: Path, batch_size: int):
     if records:
         inserted = batch_insert_records(supabase_client, records, "pubmed_records")
         total_inserted += inserted
-        click.echo(f"Inserted final batch of {inserted} records. Total: {total_inserted}")
+        click.echo(
+            f"Inserted final batch of {inserted} records. Total: {total_inserted}"
+        )
 
     click.echo(f"Successfully inserted {total_inserted} records in total")
+
 
 def batch_insert_records(client, records: list, table_name: str) -> int:
     """Insert a batch of records and return number of successful inserts."""
@@ -180,6 +207,7 @@ def batch_insert_records(client, records: list, table_name: str) -> int:
     except Exception as e:
         logger.error(f"Error inserting batch: {str(e)}")
         return 0
+
 
 @cli.command()
 def download_pubmed():
@@ -196,8 +224,10 @@ def download_pubmed():
     # Add retry decorator to handle transient failures
     @retry(
         stop=stop_after_attempt(5),  # Try 5 times
-        wait=wait_exponential(multiplier=1, min=4, max=60),  # Wait between 4 and 60 seconds, exponentially increasing
-        reraise=True
+        wait=wait_exponential(
+            multiplier=1, min=4, max=60
+        ),  # Wait between 4 and 60 seconds, exponentially increasing
+        reraise=True,
     )
     def download_with_retry(downloader, raw_dir):
         return pipeline_download_pubmed(raw_dir)
@@ -207,7 +237,9 @@ def download_pubmed():
     click.echo("Downloading PubMed baselines...")
 
     try:
-        baseline_files_downloaded, baseline_date = download_with_retry(pubmed_downloader, raw_dir)
+        baseline_files_downloaded, baseline_date = download_with_retry(
+            pubmed_downloader, raw_dir
+        )
         dated_raw_dir = raw_dir / baseline_date if baseline_date else raw_dir
 
         click.echo(f"Downloaded {len(baseline_files_downloaded)} files...")
@@ -231,7 +263,12 @@ def upload_file(bucket, directory, unzipped_file):
 @cli.command()
 @click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("batch_size", type=int, default=1)
-@click.option("--test-run", is_flag=True, default=False, help="Run in test mode (only process first batch)")
+@click.option(
+    "--test-run",
+    is_flag=True,
+    default=False,
+    help="Run in test mode (only process first batch)",
+)
 def process_pmc(input_dir: str, batch_size: int, test_run: bool):
     """Process PMC data in batches and extract metadata.
 
@@ -252,7 +289,6 @@ def process_pmc(input_dir: str, batch_size: int, test_run: bool):
 
     click.echo(f"Found {len(archive_files)} archive files to process")
 
-
     def get_id_by_type(ids, id_type):
         """Helper function to get ID value by type"""
         for doc_id in ids:
@@ -270,8 +306,10 @@ def process_pmc(input_dir: str, batch_size: int, test_run: bool):
 
     for i in range(0, len(archive_files), batch_size):
         metadata_records = []
-        batch = archive_files[i:i + batch_size]
-        click.echo(f"\nProcessing batch {i//batch_size + 1}/{(len(archive_files) + batch_size - 1)//batch_size}")
+        batch = archive_files[i : i + batch_size]
+        click.echo(
+            f"\nProcessing batch {i//batch_size + 1}/{(len(archive_files) + batch_size - 1)//batch_size}"
+        )
 
         for archive_file in batch:
             click.echo(f"\nProcessing {archive_file.name}")
@@ -286,7 +324,13 @@ def process_pmc(input_dir: str, batch_size: int, test_run: bool):
 
             # Unzip
             click.echo("Unzipping...")
-            unzipped_files = unzip_and_filter(archive_file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
+            unzipped_files = unzip_and_filter(
+                archive_file,
+                unzipped_dir,
+                extension=".xml",
+                use_gsutil=False,
+                overwrite=True,
+            )
             click.echo(f"Unzipped {len(unzipped_files)} files")
 
             # Parse
@@ -298,7 +342,12 @@ def process_pmc(input_dir: str, batch_size: int, test_run: bool):
             parsed_dir.mkdir(parents=True, exist_ok=True)
 
             click.echo(f"Parsing {len(unzipped_files)} files...")
-            parsed_files = parser.parse_docs(unzipped_files, parsed_dir, use_threads=True, max_threads=settings.MAX_WORKERS)
+            parsed_files = parser.parse_docs(
+                unzipped_files,
+                parsed_dir,
+                use_threads=True,
+                max_threads=settings.MAX_WORKERS,
+            )
             click.echo(f"Parsed {len(parsed_files)} files...")
 
             # Extract metadata and store GCS paths
@@ -310,61 +359,71 @@ def process_pmc(input_dir: str, batch_size: int, test_run: bool):
                 # Construct GCS paths
                 parsed_gcs_path = f"gs://{bucket_name}/pmc/parsed/{json_file.name}"
                 xml_name = json_file.stem + ".xml"  # Original XML file name
-                unzipped_gcs_path = f"gs://{bucket_name}/pmc/unzipped/{archive_file.stem}/{xml_name}"
+                unzipped_gcs_path = (
+                    f"gs://{bucket_name}/pmc/unzipped/{archive_file.stem}/{xml_name}"
+                )
 
-                metadata_records.append({
-                    "pmid": get_id_by_type(doc.ids, "pubmed"),
-                    "pmcid": get_id_by_type(doc.ids, "pmc"),
-                    "doi": get_id_by_type(doc.ids, "doi"),
-                    "filename": json_file.name,
-                    "title": doc.title,
-                    "year": doc.year,
-                    "archive_file": archive_file.name,
-                    "parsed_gcs_path": parsed_gcs_path,
-                    "unzipped_gcs_path": unzipped_gcs_path
-                })
+                metadata_records.append(
+                    {
+                        "pmid": get_id_by_type(doc.ids, "pubmed"),
+                        "pmcid": get_id_by_type(doc.ids, "pmc"),
+                        "doi": get_id_by_type(doc.ids, "doi"),
+                        "filename": json_file.name,
+                        "title": doc.title,
+                        "year": doc.year,
+                        "archive_file": archive_file.name,
+                        "parsed_gcs_path": parsed_gcs_path,
+                        "unzipped_gcs_path": unzipped_gcs_path,
+                    }
+                )
 
             # Upload to GCS
             click.echo("Uploading files to GCS...")
             start_time = datetime.datetime.now()
 
             # Upload unzipped files - maintain archive structure
-            unzipped_files = list(unzipped_dir.glob('**/*'))
+            unzipped_files = list(unzipped_dir.glob("**/*"))
             unzipped_files = [f for f in unzipped_files if f.is_file()]
 
             # Create partial function for unzipped files with archive-specific directory
             unzipped_upload_fn = partial(
-                upload_file,
-                bucket,
-                f"pmc/unzipped/{archive_file.stem}"
+                upload_file, bucket, f"pmc/unzipped/{archive_file.stem}"
             )
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                results = list(tqdm(
-                    executor.map(unzipped_upload_fn, unzipped_files),
-                    total=len(unzipped_files),
-                    desc="Uploading unzipped files"
-                ))
+                results = list(
+                    tqdm(
+                        executor.map(unzipped_upload_fn, unzipped_files),
+                        total=len(unzipped_files),
+                        desc="Uploading unzipped files",
+                    )
+                )
 
             unzip_upload_time = datetime.datetime.now() - start_time
-            click.echo(f"Uploaded {len(unzipped_files)} unzipped files in {unzip_upload_time}")
+            click.echo(
+                f"Uploaded {len(unzipped_files)} unzipped files in {unzip_upload_time}"
+            )
 
             # Upload parsed files - flat directory
             start_time = datetime.datetime.now()
-            parsed_files = list(parsed_dir.glob('**/*'))
+            parsed_files = list(parsed_dir.glob("**/*"))
             parsed_files = [f for f in parsed_files if f.is_file()]
 
             parsed_upload_fn = partial(upload_file, bucket, "pmc/parsed")
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                results = list(tqdm(
-                    executor.map(parsed_upload_fn, parsed_files),
-                    total=len(parsed_files),
-                    desc="Uploading parsed files"
-                ))
+                results = list(
+                    tqdm(
+                        executor.map(parsed_upload_fn, parsed_files),
+                        total=len(parsed_files),
+                        desc="Uploading parsed files",
+                    )
+                )
 
             parse_upload_time = datetime.datetime.now() - start_time
-            click.echo(f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}")
+            click.echo(
+                f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}"
+            )
 
             if test_run:
                 break
@@ -378,14 +437,22 @@ def process_pmc(input_dir: str, batch_size: int, test_run: bool):
         df = pd.DataFrame(metadata_records)
         metadata_file = metadata_dir / f"{metadata_file_stem}_{i}.csv"
         df.to_csv(metadata_file, index=False)
-        click.echo(f"Saved metadata for {len(metadata_records)} documents to {metadata_file}")
+        click.echo(
+            f"Saved metadata for {len(metadata_records)} documents to {metadata_file}"
+        )
 
     click.echo("\nAll processing complete!")
+
 
 @cli.command()
 @click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("batch_size", type=int, default=1)
-@click.option("--test-run", is_flag=True, default=False, help="Run in test mode (only process first batch)")
+@click.option(
+    "--test-run",
+    is_flag=True,
+    default=False,
+    help="Run in test mode (only process first batch)",
+)
 def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
     """Process PubMed data in batches and extract metadata.
 
@@ -423,8 +490,10 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
 
     for i in range(0, len(archive_files), batch_size):
         metadata_records = []
-        batch = archive_files[i:i + batch_size]
-        click.echo(f"\nProcessing batch {i//batch_size + 1}/{(len(archive_files) + batch_size - 1)//batch_size}")
+        batch = archive_files[i : i + batch_size]
+        click.echo(
+            f"\nProcessing batch {i//batch_size + 1}/{(len(archive_files) + batch_size - 1)//batch_size}"
+        )
 
         for archive_file in batch:
             click.echo(f"\nProcessing {archive_file.name}")
@@ -439,7 +508,13 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
 
             # Unzip
             click.echo("Unzipping...")
-            unzipped_files = unzip_and_filter(archive_file, unzipped_dir, extension=".xml", use_gsutil=False, overwrite=True)
+            unzipped_files = unzip_and_filter(
+                archive_file,
+                unzipped_dir,
+                extension=".xml",
+                use_gsutil=False,
+                overwrite=True,
+            )
             click.echo(f"Unzipped {len(unzipped_files)} files")
 
             # Parse
@@ -451,7 +526,12 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
             parsed_dir.mkdir(parents=True, exist_ok=True)
 
             print(f"Parsing {len(unzipped_files)} files...")
-            parsed_files = parser.parse_docs(unzipped_files, parsed_dir, use_threads=True, max_threads=settings.MAX_WORKERS)
+            parsed_files = parser.parse_docs(
+                unzipped_files,
+                parsed_dir,
+                use_threads=True,
+                max_threads=settings.MAX_WORKERS,
+            )
 
             print(f"Parsed {len(parsed_files)} files...")
             print("DONE: Parse PubMed data")
@@ -467,61 +547,71 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
                 # Construct GCS paths
                 parsed_gcs_path = f"gs://{bucket_name}/pubmed/parsed/{json_file.name}"
                 xml_name = json_file.stem + ".xml"  # Original XML file name
-                unzipped_gcs_path = f"gs://{bucket_name}/pubmed/unzipped/{archive_file.stem}/{xml_name}"
+                unzipped_gcs_path = (
+                    f"gs://{bucket_name}/pubmed/unzipped/{archive_file.stem}/{xml_name}"
+                )
 
-                metadata_records.append({
-                    "pmid": get_id_by_type(doc.ids, "pubmed"),
-                    "pmcid": get_id_by_type(doc.ids, "pmc"),
-                    "doi": get_id_by_type(doc.ids, "doi"),
-                    "filename": json_file.name,
-                    "title": doc.title,
-                    "year": doc.year,
-                    "archive_file": archive_file.name,
-                    "parsed_gcs_path": parsed_gcs_path,
-                    "unzipped_gcs_path": unzipped_gcs_path
-                })
+                metadata_records.append(
+                    {
+                        "pmid": get_id_by_type(doc.ids, "pubmed"),
+                        "pmcid": get_id_by_type(doc.ids, "pmc"),
+                        "doi": get_id_by_type(doc.ids, "doi"),
+                        "filename": json_file.name,
+                        "title": doc.title,
+                        "year": doc.year,
+                        "archive_file": archive_file.name,
+                        "parsed_gcs_path": parsed_gcs_path,
+                        "unzipped_gcs_path": unzipped_gcs_path,
+                    }
+                )
 
             # Upload to GCS
             click.echo("Uploading files to GCS...")
             start_time = datetime.datetime.now()
 
             # Upload unzipped files - maintain archive structure
-            unzipped_files = list(unzipped_dir.glob('**/*'))
+            unzipped_files = list(unzipped_dir.glob("**/*"))
             unzipped_files = [f for f in unzipped_files if f.is_file()]
 
             # Create partial function for unzipped files with archive-specific directory
             unzipped_upload_fn = partial(
-                upload_file,
-                bucket,
-                f"pubmed/unzipped/{archive_file.stem}"
+                upload_file, bucket, f"pubmed/unzipped/{archive_file.stem}"
             )
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                results = list(tqdm(
-                    executor.map(unzipped_upload_fn, unzipped_files),
-                    total=len(unzipped_files),
-                    desc="Uploading unzipped files"
-                ))
+                results = list(
+                    tqdm(
+                        executor.map(unzipped_upload_fn, unzipped_files),
+                        total=len(unzipped_files),
+                        desc="Uploading unzipped files",
+                    )
+                )
 
             unzip_upload_time = datetime.datetime.now() - start_time
-            click.echo(f"Uploaded {len(unzipped_files)} unzipped files in {unzip_upload_time}")
+            click.echo(
+                f"Uploaded {len(unzipped_files)} unzipped files in {unzip_upload_time}"
+            )
 
             # Upload parsed files - flat directory
             start_time = datetime.datetime.now()
-            parsed_files = list(parsed_dir.glob('**/*'))
+            parsed_files = list(parsed_dir.glob("**/*"))
             parsed_files = [f for f in parsed_files if f.is_file()]
 
             parsed_upload_fn = partial(upload_file, bucket, "pubmed/parsed")
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                results = list(tqdm(
-                    executor.map(parsed_upload_fn, parsed_files),
-                    total=len(parsed_files),
-                    desc="Uploading parsed files"
-                ))
+                results = list(
+                    tqdm(
+                        executor.map(parsed_upload_fn, parsed_files),
+                        total=len(parsed_files),
+                        desc="Uploading parsed files",
+                    )
+                )
 
             parse_upload_time = datetime.datetime.now() - start_time
-            click.echo(f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}")
+            click.echo(
+                f"Uploaded {len(parsed_files)} parsed files in {parse_upload_time}"
+            )
 
             if test_run:
                 break
@@ -535,16 +625,29 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
         df = pd.DataFrame(metadata_records)
         metadata_file = metadata_dir / f"{metadata_file_stem}_{i}.csv"
         df.to_csv(metadata_file, index=False)
-        click.echo(f"Saved metadata for {len(metadata_records)} documents to {metadata_file}")
+        click.echo(
+            f"Saved metadata for {len(metadata_records)} documents to {metadata_file}"
+        )
 
     click.echo("\nAll processing complete!")
 
+
 @cli.command()
 @click.argument("metadata_dir", type=click.Path(exists=True, file_okay=False))
-@click.option("--table-name", default="literature_metadata", help="Name of the Supabase table to insert records into")
-@click.option("--batch-size", default=1000, help="Number of records to insert in each batch")
-@click.option("--source", type=click.Choice(["PMC", "PUBMED", "ALL"], case_sensitive=False), default="ALL",
-              help="Source of metadata files to process (PMC, PUBMED, or ALL)")
+@click.option(
+    "--table-name",
+    default="literature_metadata",
+    help="Name of the Supabase table to insert records into",
+)
+@click.option(
+    "--batch-size", default=1000, help="Number of records to insert in each batch"
+)
+@click.option(
+    "--source",
+    type=click.Choice(["PMC", "PUBMED", "ALL"], case_sensitive=False),
+    default="ALL",
+    help="Source of metadata files to process (PMC, PUBMED, or ALL)",
+)
 def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source: str):
     """Upload metadata from CSV files to Supabase.
 
@@ -564,7 +667,9 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
     # Find all matching CSV files
     csv_files = list(metadata_dir.glob(file_pattern))
     if not csv_files:
-        raise click.ClickException(f"No metadata CSV files found matching pattern '{file_pattern}' in {metadata_dir}")
+        raise click.ClickException(
+            f"No metadata CSV files found matching pattern '{file_pattern}' in {metadata_dir}"
+        )
 
     click.echo(f"Found {len(csv_files)} metadata files to process")
 
@@ -596,8 +701,10 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
     total_inserted = 0
 
     for i in range(0, len(all_records), batch_size):
-        batch = all_records[i:i + batch_size]
-        click.echo(f"Uploading batch {i//batch_size + 1}/{(len(all_records) + batch_size - 1)//batch_size} ({len(batch)} records)")
+        batch = all_records[i : i + batch_size]
+        click.echo(
+            f"Uploading batch {i//batch_size + 1}/{(len(all_records) + batch_size - 1)//batch_size} ({len(batch)} records)"
+        )
 
         try:
             inserted = batch_insert_records(supabase_client, batch, table_name)
@@ -607,4 +714,6 @@ def upload_metadata(metadata_dir: str, table_name: str, batch_size: int, source:
             logger.error(f"Error inserting batch: {str(e)}")
             click.echo(f"Error inserting batch: {str(e)}")
 
-    click.echo(f"\nUpload complete! Successfully inserted {total_inserted} out of {total_records} records into {table_name}")
+    click.echo(
+        f"\nUpload complete! Successfully inserted {total_inserted} out of {total_records} records into {table_name}"
+    )

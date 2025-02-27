@@ -9,9 +9,19 @@ import xml.etree.ElementTree as ET
 import backoff
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from literature_ingest.models import ArticleType, Author, Document, DocumentId, JournalMetadata, PublicationDates, PUBMED_PUBLICATION_TYPE_MAP, Section
+from literature_ingest.models import (
+    ArticleType,
+    Author,
+    Document,
+    DocumentId,
+    JournalMetadata,
+    PublicationDates,
+    PUBMED_PUBLICATION_TYPE_MAP,
+    Section,
+)
 from literature_ingest.normalization import normalize_document
 from literature_ingest.utils.logging import log
+
 
 class PubMedParser:
     def __init__(self):
@@ -33,11 +43,7 @@ class PubMedParser:
         journal_abbrev = journal_elem.find(".//ISOAbbreviation")
         abbreviation = journal_abbrev.text if journal_abbrev is not None else None
 
-        return JournalMetadata(
-            title=title,
-            issn=issn_text,
-            abbreviation=abbreviation
-        )
+        return JournalMetadata(title=title, issn=issn_text, abbreviation=abbreviation)
 
     def print_article_type_distribution(self):
         total_docs = sum(self.unique_article_types.values())
@@ -46,7 +52,7 @@ class PubMedParser:
         sorted_types = sorted(
             self.unique_article_types.items(),
             key=lambda x: (x[1] / total_docs if total_docs > 0 else 0),
-            reverse=True
+            reverse=True,
         )
         for article_type, count in sorted_types:
             percentage = (count / total_docs * 100) if total_docs > 0 else 0
@@ -58,9 +64,18 @@ class PubMedParser:
 
         # Month name to number mapping
         month_map = {
-            'Jan': '1', 'Feb': '2', 'Mar': '3', 'Apr': '4',
-            'May': '5', 'Jun': '6', 'Jul': '7', 'Aug': '8',
-            'Sep': '9', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+            "Jan": "1",
+            "Feb": "2",
+            "Mar": "3",
+            "Apr": "4",
+            "May": "5",
+            "Jun": "6",
+            "Jul": "7",
+            "Aug": "8",
+            "Sep": "9",
+            "Oct": "10",
+            "Nov": "11",
+            "Dec": "12",
         }
 
         # Handle PubDate in Journal/JournalIssue
@@ -261,14 +276,16 @@ class PubMedParser:
         title_elem = medline_citation.find(".//Article/ArticleTitle")
         if title_elem is not None:
             # Get all text content including nested elements
-            title = ''.join(title_elem.itertext()).strip()
+            title = "".join(title_elem.itertext()).strip()
         else:
             title = ""
         sections.append(Section(name="title", text=title))
 
         # Get journal metadata
         journal = medline_citation.find(".//Journal")
-        journal_metadata = self._extract_journal_metadata(journal) if journal is not None else None
+        journal_metadata = (
+            self._extract_journal_metadata(journal) if journal is not None else None
+        )
 
         # Get publication dates
         publication_dates = self._extract_dates(article)
@@ -313,19 +330,19 @@ class PubMedParser:
             sections=sections,
             authors=authors,
             subject_groups=subject_groups,
-            parsed_date=datetime.now(timezone.utc)
+            parsed_date=datetime.now(timezone.utc),
         )
 
     def _process_single_file(self, file: Path, output_dir: Path) -> List[Path]:
         """Process a single file and return its output paths if successful"""
         output_paths = []
         try:
-            with file.open(mode='r') as f:
+            with file.open(mode="r") as f:
                 docs = self.parse_doc(f.read(), file)
 
             for doc_idx, doc in enumerate(docs):
                 output_path = output_dir / f"{file.stem}_{doc_idx}.json"
-                with open(output_path, 'w') as f:
+                with open(output_path, "w") as f:
                     f.write(doc.model_dump_json(indent=2))
                 output_paths.append(output_path)
             return output_paths
@@ -333,7 +350,13 @@ class PubMedParser:
             log.error(f"Error parsing {file.name}: {str(e)}")
             return []
 
-    def parse_docs(self, files: List[Path], output_dir: Path, use_threads: bool = False, max_threads: Optional[int] = None) -> List[Path]:
+    def parse_docs(
+        self,
+        files: List[Path],
+        output_dir: Path,
+        use_threads: bool = False,
+        max_threads: Optional[int] = None,
+    ) -> List[Path]:
         """Parse a list of PubMed XML files and save to output_dir
 
         Args:
@@ -363,8 +386,12 @@ class PubMedParser:
                         documents.extend(output_paths)
 
                     if counter % 10000 == 0:
-                        elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
-                        log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
+                        elapsed_seconds = (
+                            datetime.now(timezone.utc) - timestamp
+                        ).total_seconds()
+                        log.info(
+                            f"Parsed {counter} files in {elapsed_seconds:.1f} seconds"
+                        )
                         timestamp = datetime.now(timezone.utc)
         else:
             # Original single-threaded implementation
@@ -373,7 +400,9 @@ class PubMedParser:
                     documents.extend(output_paths)
                 counter += 1
                 if counter % 10000 == 0:
-                    elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
+                    elapsed_seconds = (
+                        datetime.now(timezone.utc) - timestamp
+                    ).total_seconds()
                     log.info(f"Parsed {counter} files in {elapsed_seconds:.1f} seconds")
                     timestamp = datetime.now(timezone.utc)
 

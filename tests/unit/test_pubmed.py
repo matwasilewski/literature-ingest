@@ -1,8 +1,16 @@
 import pytest
 from pathlib import Path
 from literature_ingest.pubmed import PubMedParser
-from literature_ingest.models import ArticleType, Document, DocumentId, Author, JournalMetadata, PublicationDates
+from literature_ingest.models import (
+    ArticleType,
+    Document,
+    DocumentId,
+    Author,
+    JournalMetadata,
+    PublicationDates,
+)
 from datetime import datetime, timezone
+
 
 def test_parse_doc_basic_fields(pubmed_doc):
     """Test basic document field parsing"""
@@ -17,12 +25,17 @@ def test_parse_doc_basic_fields(pubmed_doc):
         DocumentId(id="1", type="pubmed"),
         DocumentId(id="10.1016/0006-2944(75)90147-7", type="doi"),
     ]
-    assert doc.synthetic_id == "type=pubmed;id=1&type=doi;id=10.1016/0006-2944(75)90147-7"
+    assert (
+        doc.synthetic_id == "type=pubmed;id=1&type=doi;id=10.1016/0006-2944(75)90147-7"
+    )
     assert doc.type == ArticleType.RESEARCH_ARTICLE
 
     # Test basic metadata
     assert doc.sections[0].name == "title"
-    assert doc.sections[0].text == "Formate assay in body fluids: application in methanol poisoning."
+    assert (
+        doc.sections[0].text
+        == "Formate assay in body fluids: application in methanol poisoning."
+    )
 
     assert doc.publication_dates.collection_date == "1975-6"
 
@@ -33,6 +46,7 @@ def test_parse_doc_basic_fields(pubmed_doc):
     assert doc.journal.title == "Biochemical medicine"
     assert doc.journal.issn == "0006-2944"
     assert doc.journal.abbreviation == "Biochem Med"
+
 
 def test_parse_doc_authors(pubmed_doc):
     """Test author information parsing"""
@@ -51,6 +65,7 @@ def test_parse_doc_authors(pubmed_doc):
     assert authors[2].name == "Palese, M"
     assert authors[3].name == "Tephly, T R"
 
+
 def test_parse_doc_dates(pubmed_doc):
     """Test publication dates parsing"""
     parser = PubMedParser()
@@ -61,6 +76,7 @@ def test_parse_doc_dates(pubmed_doc):
     assert isinstance(doc.publication_dates, PublicationDates)
     assert doc.year == 1975
     assert doc.publication_dates.collection_date == "1975-6"
+
 
 def test_parse_doc_content(pubmed_doc):
     """Test document content parsing"""
@@ -80,6 +96,7 @@ def test_parse_doc_content(pubmed_doc):
     assert "Journal Article" in doc.subject_groups
     assert "Research Support, U.S. Gov't, P.H.S." in doc.subject_groups
 
+
 def test_parse_doc_pmid_2(pubmed_doc):
     """Test document field parsing for PMID 2"""
     parser = PubMedParser()
@@ -97,7 +114,10 @@ def test_parse_doc_pmid_2(pubmed_doc):
 
     # Test basic metadata
     assert doc.sections[0].name == "title"
-    assert doc.sections[0].text == "Delineation of the intimate details of the backbone conformation of pyridine nucleotide coenzymes in aqueous solution."
+    assert (
+        doc.sections[0].text
+        == "Delineation of the intimate details of the backbone conformation of pyridine nucleotide coenzymes in aqueous solution."
+    )
     assert doc.type == ArticleType.RESEARCH_ARTICLE  # Default type for Journal Article
 
     # Test journal metadata with electronic ISSN
@@ -122,6 +142,7 @@ def test_parse_doc_pmid_2(pubmed_doc):
     assert "Research Support, U.S. Gov't, Non-P.H.S." in doc.subject_groups
     assert "Research Support, U.S. Gov't, P.H.S." in doc.subject_groups
 
+
 def test_parse_doc_pmid_3(pubmed_doc):
     """Test document field parsing for PMID 3"""
     parser = PubMedParser()
@@ -138,7 +159,10 @@ def test_parse_doc_pmid_3(pubmed_doc):
 
     # Test basic metadata
     assert doc.sections[0].name == "title"
-    assert doc.sections[0].text == "Metal substitutions incarbonic anhydrase: a halide ion probe study."
+    assert (
+        doc.sections[0].text
+        == "Metal substitutions incarbonic anhydrase: a halide ion probe study."
+    )
     assert doc.type == ArticleType.RESEARCH_ARTICLE  # Default type for Journal Article
 
     # Test journal metadata with print ISSN
@@ -163,6 +187,7 @@ def test_parse_doc_pmid_3(pubmed_doc):
     # Test subject groups
     assert "Journal Article" in doc.subject_groups
     assert "Research Support, U.S. Gov't, P.H.S." in doc.subject_groups
+
 
 def test_parse_doc_pmid_30934(pubmed_doc):
     """Test document field parsing for PMID 30934"""
@@ -197,7 +222,7 @@ def test_parse_doc_pmid_30934(pubmed_doc):
     assert doc.publication_dates.collection_date == "1976"  # From MedlineDate
 
     # Test abstract
-    expected_abstract = "This report concerns application of the graphical method for representing pH and Eh relationships in macromolecular systems (see previous paper) to in vivo studies. The author presents reasons for concluding that controlled measurements of urine are satisfactory indicators of changes in pH and Eh in the body whereas blood studies remain relatively constant. The original concept had to be modified because of two little known \"reversing phenomena\". One is well known to physicians as the \"acid rebound\" because of the acid reaction of urine when an excess of a base is administered. This is a paradox because it would be expected to be more alkaline. The second phenomenon occurs following hyperoxidation, such as in narcotic addiction, and results in reduction. Both hyperalkalinity and hyperoxidation result in an acid reaction. The author concludes that they are phases of a single phenomenon. It is the basis for \"Chapman's law\": Unfavorable effects on the body cause the urine pH and Eh to shift away from normal whereas favorable effects cause them to shift toward normal."
+    expected_abstract = 'This report concerns application of the graphical method for representing pH and Eh relationships in macromolecular systems (see previous paper) to in vivo studies. The author presents reasons for concluding that controlled measurements of urine are satisfactory indicators of changes in pH and Eh in the body whereas blood studies remain relatively constant. The original concept had to be modified because of two little known "reversing phenomena". One is well known to physicians as the "acid rebound" because of the acid reaction of urine when an excess of a base is administered. This is a paradox because it would be expected to be more alkaline. The second phenomenon occurs following hyperoxidation, such as in narcotic addiction, and results in reduction. Both hyperalkalinity and hyperoxidation result in an acid reaction. The author concludes that they are phases of a single phenomenon. It is the basis for "Chapman\'s law": Unfavorable effects on the body cause the urine pH and Eh to shift away from normal whereas favorable effects cause them to shift toward normal.'
     assert doc.sections[1].name == "abstract"
     assert doc.sections[1].text == expected_abstract
 

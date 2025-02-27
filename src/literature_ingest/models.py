@@ -6,6 +6,7 @@ import datetime
 
 class ArticleType(str, Enum):
     """Standardized article types used internally"""
+
     RESEARCH_ARTICLE = "Research Article"
     REVIEW = "Review"
     CASE_REPORT = "Case Report"
@@ -23,6 +24,7 @@ class ArticleType(str, Enum):
     SYSTEMATIC_REVIEW = "Systematic Review"
     CHAPTER_ARTICLE = "Chapter Article"
     COMMUNITY_COMMENT = "Community Comment"
+
 
 PMC_ARTICLE_TYPE_MAP = {
     "research-article": ArticleType.RESEARCH_ARTICLE,
@@ -96,6 +98,7 @@ class DocumentId(BaseModel):
 
 class Author(BaseModel):
     """Represents an author with their name and affiliations"""
+
     name: str
     email: Optional[str] = None
     affiliations: List[str] = []
@@ -104,6 +107,7 @@ class Author(BaseModel):
 
 class JournalMetadata(BaseModel):
     """Journal-specific metadata"""
+
     title: str
     issn: Optional[str] = None
     publisher: Optional[str] = None
@@ -112,6 +116,7 @@ class JournalMetadata(BaseModel):
 
 class PublicationDates(BaseModel):
     """Various publication dates associated with the article"""
+
     received_date: Optional[str] = None
     accepted_date: Optional[str] = None
     epub_date: Optional[str] = None
@@ -120,14 +125,13 @@ class PublicationDates(BaseModel):
     def items(self):
         """Returns an iterator of (date_type, date_value) tuples for non-None dates"""
         return [
-            (name, value)
-            for name, value in self.__dict__.items()
-            if value is not None
+            (name, value) for name, value in self.__dict__.items() if value is not None
         ]
 
 
 class AnnotationType(str, Enum):
     """Standardized annotation types used internally"""
+
     GENE = "Gene"
     DRUG = "Drug"
     DISEASE = "Disease"
@@ -135,12 +139,15 @@ class AnnotationType(str, Enum):
 
 class Annotation(BaseModel):
     """Represents an annotation in the document"""
+
     start: int
     end: int
     type: AnnotationType
 
+
 class Section(BaseModel):
     """Represents a section in the document"""
+
     name: str
     text: str
     annotations: List[Annotation] = []
@@ -151,6 +158,7 @@ class Section(BaseModel):
 
 class Document(BaseModel):
     """Represents a PMC document with enhanced metadata"""
+
     # Core identifiers
     ids: List[DocumentId] = []
 
@@ -183,14 +191,22 @@ class Document(BaseModel):
     copyright_statement: Optional[str] = None
     copyright_year: Optional[str] = None
 
-    parsed_date: datetime.datetime = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    parsed_date: datetime.datetime = datetime.datetime.now(
+        datetime.timezone.utc
+    ).isoformat()
 
     def __init__(self, **data):
         # Generate synthetic_id from ids before calling parent constructor
-        if 'ids' in data and not data.get('synthetic_id'):
+        if "ids" in data and not data.get("synthetic_id"):
             # Filter out publisher-id and sort by type
-            filtered_ids = [id for id in data['ids'] if isinstance(id, DocumentId) and id.type != "publisher-id"]
-            data['synthetic_id'] = "&".join([f"type={id.type};id={id.id}" for id in filtered_ids])
+            filtered_ids = [
+                id
+                for id in data["ids"]
+                if isinstance(id, DocumentId) and id.type != "publisher-id"
+            ]
+            data["synthetic_id"] = "&".join(
+                [f"type={id.type};id={id.id}" for id in filtered_ids]
+            )
 
         super().__init__(**data)
 
@@ -199,9 +215,12 @@ class Document(BaseModel):
         return self.model_dump_json(indent=indent)
 
     def to_raw_text(self) -> str:
-        """Convert document to raw text format.
-        """
-        return "\n\n".join([section.text for section in self.sections]) if self.sections else ""
+        """Convert document to raw text format."""
+        return (
+            "\n\n".join([section.text for section in self.sections])
+            if self.sections
+            else ""
+        )
 
     @property
     def title(self) -> str:

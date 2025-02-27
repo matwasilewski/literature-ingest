@@ -17,7 +17,7 @@ def _get_project_meta(name: str = "unknown") -> Dict:
     try:
         with Path("./pyproject.toml").open() as pyproject:
             file_contents = pyproject.read()
-        parsed = dict(tomlkit.parse(file_contents))['project']
+        parsed = dict(tomlkit.parse(file_contents))["project"]
         name = parsed["name"]
         version = parsed.get("version", "unknown")
         description = parsed.get("description", "")
@@ -56,9 +56,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "info"
     VERBOSE_LOGS: Union[bool, int, str] = True
     JSON_LOGS: Union[bool, int, str] = False
-    LOG_DIR: Path = (
-        Path("logs") / f"{current_timestamp}-{LOGGER_NAME}-{LOG_LEVEL}.log"
-    )
+    LOG_DIR: Path = Path("logs") / f"{current_timestamp}-{LOGGER_NAME}-{LOG_LEVEL}.log"
 
     TEST_BUCKET: Optional[str] = None
     PROD_BUCKET: Optional[str] = None
@@ -74,6 +72,7 @@ class Settings(BaseSettings):
         case_sensitive = True
         secrets_dir = "secrets"
 
+
 def get_project_root() -> Path:
     """Find the project root directory by looking for pyproject.toml"""
     current = Path(__file__).resolve().parent
@@ -84,12 +83,13 @@ def get_project_root() -> Path:
     print(current)
     raise FileNotFoundError("Could not find project root (pyproject.toml)")
 
+
 @lru_cache
 def get_settings() -> Settings:
     project_root = get_project_root()
     return Settings(
-        _env_file=str(project_root / ".env"),
-        _secrets_dir=str(project_root / "secrets")
+        _env_file=str(project_root / ".env"), _secrets_dir=str(project_root / "secrets")
     )
+
 
 settings = get_settings()

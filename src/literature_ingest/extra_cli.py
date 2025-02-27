@@ -2,7 +2,13 @@ from pathlib import Path
 from typing import List, Optional, Union
 from xml.dom.minidom import Document
 import click
-from literature_ingest.pmc import PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR, PUBMED_OPEN_ACCESS_DIR, PMCFTPClient, PMCParser, PubMedFTPClient
+from literature_ingest.pmc import (
+    PMC_OPEN_ACCESS_NONCOMMERCIAL_XML_DIR,
+    PUBMED_OPEN_ACCESS_DIR,
+    PMCFTPClient,
+    PMCParser,
+    PubMedFTPClient,
+)
 from literature_ingest.utils.logging import get_logger
 from literature_ingest.utils.config import settings
 
@@ -14,6 +20,8 @@ from literature_ingest.cli import cli, get_client
 
 
 logger = get_logger(__name__, "info")
+
+
 @cli.command()
 @click.argument("file", type=str)
 @click.argument("target", type=Path)
@@ -23,7 +31,7 @@ logger = get_logger(__name__, "info")
     help="Source to download from (currently supports: PMC)",
     type=str,
 )
-def get_file(file: str, target: Path, source: str) -> None :
+def get_file(file: str, target: Path, source: str) -> None:
     """Download a file from the specified source."""
     if target.is_dir():
         target = target / file
@@ -32,6 +40,7 @@ def get_file(file: str, target: Path, source: str) -> None :
     client.download_file(file, target)
     client.close()
     click.echo(f"Downloaded {file} to {target}")
+
 
 @cli.command()
 @click.argument("input_path", type=click.Path(exists=True, dir_okay=False))
@@ -52,7 +61,7 @@ def parse_doc(input_path: str, output_path: str, format: str):
     """
     try:
         # Read input file
-        with open(input_path, 'r') as f:
+        with open(input_path, "r") as f:
             xml_content = f.read()
 
         # Parse document
@@ -60,7 +69,7 @@ def parse_doc(input_path: str, output_path: str, format: str):
         doc = parser.parse_doc(xml_content, Path(input_path))
 
         # Write output based on format
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             if format == "raw":
                 f.write(doc.to_raw_text())
             else:

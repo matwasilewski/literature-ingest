@@ -19,6 +19,7 @@ def test_pmc_connection():
         client.close()
         assert client.ftp is None  # Verify connection is closed
 
+
 def test_connection_error_handling():
     """Test error handling with invalid connection attempts"""
     client = PMCFTPClient()
@@ -27,12 +28,14 @@ def test_connection_error_handling():
     with pytest.raises(Exception):
         client.connect()
 
+
 @pytest.fixture
 def temp_baseline_dir(tmp_path):
     """Fixture that provides a temporary directory for baseline downloads"""
     baseline_dir = tmp_path / "baselines"
     baseline_dir.mkdir()
     return baseline_dir
+
 
 def test_download_baselines(temp_baseline_dir):
     """Test downloading baseline files"""

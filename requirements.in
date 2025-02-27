@@ -9,7 +9,7 @@ backoff
 tenacity
 notebook
 openai
-scikit-learn
+scikit - learn
 pandas
 transformers
 torch
