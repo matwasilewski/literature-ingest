@@ -205,6 +205,7 @@ def batch_insert_records(client, records: list, table_name: str) -> int:
         result = client.table(table_name).insert(records).execute()
         return len(result.data)
     except Exception as e:
+        breakpoint()
         logger.error(f"Error inserting batch: {str(e)}")
         return 0
 
