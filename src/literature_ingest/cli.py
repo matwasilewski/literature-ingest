@@ -655,7 +655,7 @@ def process_pubmed(input_dir: str, batch_size: int, test_run: bool):
 @click.argument("metadata_dir", type=click.Path(exists=True, file_okay=False))
 @click.option(
     "--table-name",
-    default="literature_metadata",
+    default="document_ids",
     help="Name of the Supabase table to insert records into",
 )
 @click.option(
